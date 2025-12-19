@@ -3,133 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تعلم اللغات - Duolingo Style</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>تعلم اللغات - تطبيق سريع</title>
+    <style>
+        /* الأنماط الأساسية */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #58CC02, #1CB0F6);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .logo {
+            color: #58CC02;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        
+        input, button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        input {
+            border: 2px solid #ddd;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: #58CC02;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: #4CAF50;
+            transform: scale(1.05);
+        }
+        
+        .language-card {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .language-card:hover {
+            background: #e0e0e0;
+            transform: translateX(-5px);
+        }
+        
+        .flag {
+            font-size: 2em;
+        }
+    </style>
 </head>
 <body>
-    <!-- شاشة التحميل -->
-    <div id="loading-screen" class="screen active">
-        <div class="loading-animation">
-            <div class="owl">
-                <div class="body"></div>
-                <div class="eyes"></div>
-            </div>
-            <h2>جاري التحميل...</h2>
-        </div>
-    </div>
-
     <!-- شاشة التسجيل -->
-    <div id="register-screen" class="screen">
-        <div class="container">
-            <div class="logo">
-                <i class="fas fa-language"></i>
-                <h1>تعلم اللغات</h1>
-            </div>
-            <div class="form-container">
-                <h2>ابدأ رحلة التعلم</h2>
-                <input type="text" placeholder="اسم المستخدم" id="username">
-                <input type="email" placeholder="البريد الإلكتروني" id="email">
-                <button onclick="startLearning()" class="btn-primary">
-                    ابدأ التعلم <i class="fas fa-arrow-left"></i>
-                </button>
-            </div>
-        </div>
+    <div id="register" class="screen active">
+        <div class="logo">🌍 تعلم اللغات</div>
+        <h2>ابدأ رحلة التعلم</h2>
+        <input type="text" id="username" placeholder="اسمك" value="متعلم">
+        <input type="email" id="email" placeholder="بريدك (اختياري)">
+        <button onclick="startApp()" class="btn-primary">🚀 ابدأ التعلم الآن</button>
     </div>
 
     <!-- شاشة اختيار اللغة -->
-    <div id="language-screen" class="screen">
-        <div class="container">
-            <h2>اختر اللغة التي تريد تعلمها</h2>
-            <div class="language-grid">
-                <div class="language-card" onclick="selectLanguage('en')">
-                    <span class="flag">🇬🇧</span>
-                    <h3>الإنجليزية</h3>
-                    <p>الكلمات الأساسية</p>
-                </div>
-                <div class="language-card" onclick="selectLanguage('fr')">
-                    <span class="flag">🇫🇷</span>
-                    <h3>الفرنسية</h3>
-                    <p>الكلمات الأساسية</p>
-                </div>
-                <!-- لغات أخرى -->
-            </div>
+    <div id="language" class="screen">
+        <h2>اختر اللغة</h2>
+        <div class="language-card" onclick="selectLanguage('en')">
+            <div class="flag">🇬🇧</div>
+            <h3>الإنجليزية</h3>
+            <p>ابدأ بالأساسيات</p>
         </div>
+        <div class="language-card" onclick="selectLanguage('fr')">
+            <div class="flag">🇫🇷</div>
+            <h3>الفرنسية</h3>
+            <p>تعلم الفرنسية</p>
+        </div>
+        <button onclick="goBack()" style="background: #666; margin-top: 20px;">↩ العودة</button>
     </div>
 
-    <!-- الشاشة الرئيسية (الدرس) -->
-    <div id="main-screen" class="screen">
-        <header>
-            <div class="user-info">
-                <img src="https://ui-avatars.com/api/?name=متعلم" alt="صورة" class="avatar">
-                <div>
-                    <h4 id="current-user">متعلم</h4>
-                    <div class="xp-bar">
-                        <div class="xp-fill" id="xp-fill"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="stats">
-                <div class="heart">❤️ × <span id="hearts">5</span></div>
-                <div class="gems">💎 <span id="gems">150</span></div>
-            </div>
-        </header>
-
-        <main>
-            <!-- منطقة الدرس ستتغير حسب نوع التمرين -->
-            <div id="lesson-area"></div>
-        </main>
-
-        <footer>
-            <nav>
-                <button onclick="showScreen('home')"><i class="fas fa-home"></i></button>
-                <button onclick="showScreen('learn')" class="active"><i class="fas fa-book"></i></button>
-                <button onclick="showScreen('shop')"><i class="fas fa-store"></i></button>
-                <button onclick="showScreen('profile')"><i class="fas fa-user"></i></button>
-            </nav>
-        </footer>
-    </div>
-
-    <!-- أنواع التمارين المختلفة -->
-    <template id="flashcard-template">
-        <div class="exercise flashcard-exercise">
-            <h3>اختر الترجمة الصحيحة</h3>
-            <div class="word-display">
-                <span id="word-text">Hello</span>
-                <button onclick="playSound()" class="sound-btn">
-                    <i class="fas fa-volume-up"></i>
-                </button>
-            </div>
-            <div class="options">
-                <button class="option" onclick="checkAnswer(1)">مرحباً</button>
-                <button class="option" onclick="checkAnswer(2)">شكراً</button>
-                <button class="option" onclick="checkAnswer(3)">مع السلامة</button>
-                <button class="option" onclick="checkAnswer(4)">من فضلك</button>
-            </div>
+    <!-- شاشة الدرس الرئيسية -->
+    <div id="lesson" class="screen">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div>❤️ 5</div>
+            <div id="xp">0 XP</div>
+            <div>🔥 <span id="streak">0</span></div>
         </div>
-    </template>
-
-    <template id="matching-template">
-        <div class="exercise matching-exercise">
-            <h3>طابق الكلمات</h3>
-            <div class="matching-grid">
-                <!-- سيتم ملؤها بالجافاسكريبت -->
-            </div>
-        </div>
-    </template>
-
-    <template id="listening-template">
-        <div class="exercise listening-exercise">
-            <h3>اسمع واكتب</h3>
-            <button onclick="playListening()" class="play-btn">
-                <i class="fas fa-play"></i> تشغيل الصوت
+        
+        <div style="background: #f0f8ff; padding: 30px; border-radius: 15px; margin: 20px 0;">
+            <h1 id="word" style="font-size: 3em; margin: 20px 0;">Hello</h1>
+            <button onclick="playSound()" style="background: #1CB0F6; color: white; border: none; padding: 10px 20px; border-radius: 50%; font-size: 1.5em;">
+                🔊
             </button>
-            <input type="text" id="answer-input" placeholder="اكتب ما سمعت">
-            <button onclick="checkSpelling()" class="submit-btn">تحقق</button>
         </div>
-    </template>
+        
+        <div style="margin: 20px 0;">
+            <h3>ماذا تعني هذه الكلمة؟</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0;">
+                <button class="option" onclick="checkAnswer(this, 'مرحباً')">مرحباً</button>
+                <button class="option" onclick="checkAnswer(this, 'شكراً')">شكراً</button>
+                <button class="option" onclick="checkAnswer(this, 'مع السلامة')">مع السلامة</button>
+                <button class="option" onclick="checkAnswer(this, 'من فضلك')">من فضلك</button>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+            <button onclick="nextWord()" class="btn-primary">التالي →</button>
+        </div>
+    </div>
 
-    <script src="app.js"></script>
-    <script src="audio.js"></script>
+    <script>
+        // التطبيق البسيط الذي يعمل مباشرة
+        let currentLanguage = 'en';
+        let xp = 0;
+        let streak = 0;
+        let currentWordIndex = 0;
+        
+        // الكلمات الأساسية
+        const words = {
+            en: [
+                { word: "Hello", translation: "مرحباً", sound: "hello" },
+                { word: "Goodbye", translation: "مع السلامة", sound: "goodbye" },
+                { word: "Thank you", translation: "شكراً", sound: "thankyou" },
+                { word: "Please", translation: "من فضلك", sound: "please" },
+                { word: "Water", translation: "ماء", sound: "water" }
+            ],
+            fr: [
+                { word: "Bonjour", translation: "مرحباً", sound: "bonjour" },
+                { word: "Merci", translation: "شكراً", sound: "merci" },
+                { word: "Au revoir", translation: "مع السلامة", sound: "aurevoir" }
+            ]
+        };
+        
+        // وظائف التنقل
+        function showScreen(screenId) {
+            // إخفاء جميع الشاشات
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // إظهار الشاشة المطلوبة
+            document.getElementById(screenId).classList.add('active');
+        }
+        
+        function startApp() {
+            const username = document.getElementById('username').value || 'متعلم';
+            localStorage.setItem('username', username);
+            showScreen('language');
+        }
+        
+        function selectLanguage(lang) {
+            currentLanguage = lang;
+            showScreen('lesson');
+            loadWord();
+        }
+        
+        function goBack() {
+            showScreen('register');
+        }
+        
+        // وظائف الدرس
+        function loadWord() {
+            const wordList = words[currentLanguage] || words.en;
+            const currentWord = wordList[currentWordIndex];
+            
+            document.getElementById('word').textContent = currentWord.word;
+            document.getElementById('xp').textContent = xp + ' XP';
+            document.getElementById('streak').textContent = streak;
+            
+            // إعادة تعيين أزرار الخيارات
+            const options = document.querySelectorAll('.option');
+            options.forEach(btn => {
+                btn.style.background = '#f0f0f0';
+                btn.style.color = '#333';
+                btn.disabled = false;
+            });
+        }
+        
+        function playSound() {
+            // محاكاة الصوت
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3');
+            audio.play();
+            alert("🔊 الصوت يعمل! (في النسخة النهائية سيتم نطق الكلمة)");
+        }
+        
+        function checkAnswer(button, answer) {
+            const wordList = words[currentLanguage];
+            const currentWord = wordList[currentWordIndex];
+            
+            if (answer === currentWord.translation) {
+                // إجابة صحيحة
+                button.style.background = '#58CC02';
+                button.style.color = 'white';
+                
+                // زيادة النقاط
+                xp += 10;
+                streak++;
+                
+                // تحديث العرض
+                document.getElementById('xp').textContent = xp + ' XP';
+                document.getElementById('streak').textContent = streak;
+                
+                // إظهار رسالة
+                setTimeout(() => {
+                    alert('🎉 أحسنت! +10 نقطة');
+                }, 300);
+            } else {
+                // إجابة خاطئة
+                button.style.background = '#FF4B4B';
+                button.style.color = 'white';
+                
+                // إعادة تعيين المتتالية
+                streak = 0;
+                document.getElementById('streak').textContent = streak;
+                
+                // إظهار الإجابة الصحيحة
+                setTimeout(() => {
+                    alert('❌ الإجابة الصحيحة هي: ' + currentWord.translation);
+                }, 300);
+            }
+            
+            // تعطيل جميع الأزرار
+            document.querySelectorAll('.option').forEach(btn => {
+                btn.disabled = true;
+            });
+        }
+        
+        function nextWord() {
+            const wordList = words[currentLanguage];
+            currentWordIndex = (currentWordIndex + 1) % wordList.length;
+            loadWord();
+        }
+        
+        // بدء التطبيق
+        window.onload = function() {
+            // تحميل اسم المستخدم إذا موجود
+            const savedUsername = localStorage.getItem('username');
+            if (savedUsername) {
+                document.getElementById('username').value = savedUsername;
+            }
+            
+            console.log('✅ التطبيق جاهز للعمل!');
+        };
+    </script>
 </body>
 </html>
