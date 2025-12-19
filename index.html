@@ -1,44 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
-    <title>تعلم اللغات</title>
-    <style>
-        body { font-family: Arial; text-align: center; }
-        .card {
-            width: 300px;
-            height: 200px;
-            margin: 50px auto;
-            background: #f0f0f0;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            cursor: pointer;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تعلم اللغات - تطبيق تفاعلي</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <h1>تطبيق تعلم اللغات</h1>
-    
-    <div class="card" onclick="flipCard()">
-        <div id="front">Hello</div>
-        <div id="back" style="display:none;">مرحباً</div>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-language"></i> تطبيق تعلم اللغات</h1>
+            <p>تعلم اللغات بطريقة ممتعة وفعالة</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-number" id="streak">0</span>
+                <span class="stat-label">يوم متتالي</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="words-learned">0</span>
+                <span class="stat-label">كلمة مكتسبة</span>
+            </div>
+        </div>
+
+        <main>
+            <div class="flashcard" id="flashcard">
+                <div class="card" id="card">
+                    <div class="card-front" id="front">
+                        <h2 id="word">Hello</h2>
+                        <p class="hint">اضغط لترى الترجمة</p>
+                    </div>
+                    <div class="card-back" id="back">
+                        <h2 id="translation">مرحباً</h2>
+                        <p id="example">"Hello, how are you?" - "مرحباً، كيف حالك؟"</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button onclick="markEasy()">
+                    <i class="fas fa-smile"></i> سهل
+                </button>
+                <button onclick="markMedium()">
+                    <i class="fas fa-meh"></i> متوسط
+                </button>
+                <button onclick="markHard()">
+                    <i class="fas fa-frown"></i> صعب
+                </button>
+                <button onclick="nextCard()">
+                    <i class="fas fa-arrow-right"></i> التالي
+                </button>
+            </div>
+
+            <div class="progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <span id="progressText">0/10</span>
+            </div>
+
+            <div class="language-selector">
+                <h3>اختر اللغة:</h3>
+                <button onclick="setLanguage('en')">الإنجليزية</button>
+                <button onclick="setLanguage('fr')">الفرنسية</button>
+                <button onclick="setLanguage('es')">الإسبانية</button>
+                <button onclick="setLanguage('de')">الألمانية</button>
+            </div>
+        </main>
+
+        <footer>
+            <p>مستوى اليوم: <span id="level">مبتدئ</span></p>
+            <p id="motivation">استمر! كل خطوة تقربك من الطلاقة</p>
+        </footer>
     </div>
-    
-    <script>
-        function flipCard() {
-            const front = document.getElementById('front');
-            const back = document.getElementById('back');
-            
-            if (front.style.display !== 'none') {
-                front.style.display = 'none';
-                back.style.display = 'block';
-            } else {
-                front.style.display = 'block';
-                back.style.display = 'none';
-            }
-        }
-    </script>
+
+    <script src="app.js"></script>
 </body>
 </html>
