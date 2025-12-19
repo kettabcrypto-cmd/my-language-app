@@ -1,32 +1,31 @@
-# تطبيق تعلم اللغات
+# Language Learning App
 
-تطبيق ويب تفاعلي لتعلم اللغات باستخدام البطاقات التعليمية.
+An interactive web application for learning languages using flashcards.
 
-## ✨ المميزات
-- ✅ **بطاقات تعليمية تفاعلية**  
-- ✅ **نظام التكرار المتباعد**  
-- ✅ **تتبع التقدم**  
-- 🔄 تمارين متنوعة (قيد التطوير)  
-- 🔄 ألعاب تعليمية (قيد التطوير)  
+## ✨ Features
+- ✅ Interactive flashcards
+- ✅ Spaced repetition system
+- ✅ Progress tracking
+- 🚧 Various exercises (in development)
+- 🚧 Educational games (in development)
 
-## 🛠️ التقنيات المستخدمة
-- **HTML5**
-- **CSS3**
-- **JavaScript (ES6+)**
+## 🛠️ Technologies Used
+- HTML5
+- CSS3
+- JavaScript (ES6+)
 
-## 🚀 كيفية التشغيل
+## 🚀 Quick Start
 
-### الطريقة 1: مباشرة من GitHub Pages
-1. انتقل إلى: `https://[اسم-المستخدم].github.io/my-language-app`
+### Method 1: Live Demo (GitHub Pages)
+Visit: `https://YOUR-USERNAME.github.io/my-language-app`
 
-### الطريقة 2: تشغيل محلياً
+### Method 2: Run Locally
 ```bash
-# 1. انسخ المشروع:
-git clone https://github.com/[اسم-المستخدم]/my-language-app.git
+# 1. Clone the repository
+git clone https://github.com/YOUR-USERNAME/my-language-app.git
 
-# 2. افتح المجلد:
+# 2. Navigate to the project folder
 cd my-language-app
 
-# 3. افتح الملف في المتصفح:
-#    - انقر نقراً مزدوجاً على ملف index.html
-#    - أو اسحبه إلى نافذة المتصفح
+# 3. Open in browser
+# Simply open index.html in any web browser
