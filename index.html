@@ -3,79 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تعلم اللغات - تطبيق تفاعلي</title>
+    <title>تعلم اللغات - Duolingo Style</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1><i class="fas fa-language"></i> تطبيق تعلم اللغات</h1>
-            <p>تعلم اللغات بطريقة ممتعة وفعالة</p>
-        </header>
-
-        <div class="stats">
-            <div class="stat-item">
-                <span class="stat-number" id="streak">0</span>
-                <span class="stat-label">يوم متتالي</span>
+    <!-- شاشة التحميل -->
+    <div id="loading-screen" class="screen active">
+        <div class="loading-animation">
+            <div class="owl">
+                <div class="body"></div>
+                <div class="eyes"></div>
             </div>
-            <div class="stat-item">
-                <span class="stat-number" id="words-learned">0</span>
-                <span class="stat-label">كلمة مكتسبة</span>
+            <h2>جاري التحميل...</h2>
+        </div>
+    </div>
+
+    <!-- شاشة التسجيل -->
+    <div id="register-screen" class="screen">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-language"></i>
+                <h1>تعلم اللغات</h1>
+            </div>
+            <div class="form-container">
+                <h2>ابدأ رحلة التعلم</h2>
+                <input type="text" placeholder="اسم المستخدم" id="username">
+                <input type="email" placeholder="البريد الإلكتروني" id="email">
+                <button onclick="startLearning()" class="btn-primary">
+                    ابدأ التعلم <i class="fas fa-arrow-left"></i>
+                </button>
             </div>
         </div>
+    </div>
+
+    <!-- شاشة اختيار اللغة -->
+    <div id="language-screen" class="screen">
+        <div class="container">
+            <h2>اختر اللغة التي تريد تعلمها</h2>
+            <div class="language-grid">
+                <div class="language-card" onclick="selectLanguage('en')">
+                    <span class="flag">🇬🇧</span>
+                    <h3>الإنجليزية</h3>
+                    <p>الكلمات الأساسية</p>
+                </div>
+                <div class="language-card" onclick="selectLanguage('fr')">
+                    <span class="flag">🇫🇷</span>
+                    <h3>الفرنسية</h3>
+                    <p>الكلمات الأساسية</p>
+                </div>
+                <!-- لغات أخرى -->
+            </div>
+        </div>
+    </div>
+
+    <!-- الشاشة الرئيسية (الدرس) -->
+    <div id="main-screen" class="screen">
+        <header>
+            <div class="user-info">
+                <img src="https://ui-avatars.com/api/?name=متعلم" alt="صورة" class="avatar">
+                <div>
+                    <h4 id="current-user">متعلم</h4>
+                    <div class="xp-bar">
+                        <div class="xp-fill" id="xp-fill"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="heart">❤️ × <span id="hearts">5</span></div>
+                <div class="gems">💎 <span id="gems">150</span></div>
+            </div>
+        </header>
 
         <main>
-            <div class="flashcard" id="flashcard">
-                <div class="card" id="card">
-                    <div class="card-front" id="front">
-                        <h2 id="word">Hello</h2>
-                        <p class="hint">اضغط لترى الترجمة</p>
-                    </div>
-                    <div class="card-back" id="back">
-                        <h2 id="translation">مرحباً</h2>
-                        <p id="example">"Hello, how are you?" - "مرحباً، كيف حالك؟"</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="controls">
-                <button onclick="markEasy()">
-                    <i class="fas fa-smile"></i> سهل
-                </button>
-                <button onclick="markMedium()">
-                    <i class="fas fa-meh"></i> متوسط
-                </button>
-                <button onclick="markHard()">
-                    <i class="fas fa-frown"></i> صعب
-                </button>
-                <button onclick="nextCard()">
-                    <i class="fas fa-arrow-right"></i> التالي
-                </button>
-            </div>
-
-            <div class="progress">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                <span id="progressText">0/10</span>
-            </div>
-
-            <div class="language-selector">
-                <h3>اختر اللغة:</h3>
-                <button onclick="setLanguage('en')">الإنجليزية</button>
-                <button onclick="setLanguage('fr')">الفرنسية</button>
-                <button onclick="setLanguage('es')">الإسبانية</button>
-                <button onclick="setLanguage('de')">الألمانية</button>
-            </div>
+            <!-- منطقة الدرس ستتغير حسب نوع التمرين -->
+            <div id="lesson-area"></div>
         </main>
 
         <footer>
-            <p>مستوى اليوم: <span id="level">مبتدئ</span></p>
-            <p id="motivation">استمر! كل خطوة تقربك من الطلاقة</p>
+            <nav>
+                <button onclick="showScreen('home')"><i class="fas fa-home"></i></button>
+                <button onclick="showScreen('learn')" class="active"><i class="fas fa-book"></i></button>
+                <button onclick="showScreen('shop')"><i class="fas fa-store"></i></button>
+                <button onclick="showScreen('profile')"><i class="fas fa-user"></i></button>
+            </nav>
         </footer>
     </div>
 
+    <!-- أنواع التمارين المختلفة -->
+    <template id="flashcard-template">
+        <div class="exercise flashcard-exercise">
+            <h3>اختر الترجمة الصحيحة</h3>
+            <div class="word-display">
+                <span id="word-text">Hello</span>
+                <button onclick="playSound()" class="sound-btn">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+            </div>
+            <div class="options">
+                <button class="option" onclick="checkAnswer(1)">مرحباً</button>
+                <button class="option" onclick="checkAnswer(2)">شكراً</button>
+                <button class="option" onclick="checkAnswer(3)">مع السلامة</button>
+                <button class="option" onclick="checkAnswer(4)">من فضلك</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="matching-template">
+        <div class="exercise matching-exercise">
+            <h3>طابق الكلمات</h3>
+            <div class="matching-grid">
+                <!-- سيتم ملؤها بالجافاسكريبت -->
+            </div>
+        </div>
+    </template>
+
+    <template id="listening-template">
+        <div class="exercise listening-exercise">
+            <h3>اسمع واكتب</h3>
+            <button onclick="playListening()" class="play-btn">
+                <i class="fas fa-play"></i> تشغيل الصوت
+            </button>
+            <input type="text" id="answer-input" placeholder="اكتب ما سمعت">
+            <button onclick="checkSpelling()" class="submit-btn">تحقق</button>
+        </div>
+    </template>
+
     <script src="app.js"></script>
+    <script src="audio.js"></script>
 </body>
 </html>
