@@ -1,256 +1,215 @@
-// خدمة API للتواصل مع Twelve Data
+// خدمة API مبسطة - طلب واحد فقط لكل تحديث
 
 class APIService {
     constructor() {
-        this.baseURL = CONFIG.API_BASE_URL;
+        this.baseURL = 'https://api.twelvedata.com';
         this.apiKey = CONFIG.API_KEY;
     }
     
-    // طلب عام مع معالجة الأخطاء
-    async makeRequest(endpoint, params = {}) {
-        const url = new URL(`${this.baseURL}${endpoint}`);
+    // طلب واحد لجميع العملات
+    async getAllForexData() {
+        const cacheKey = 'all_forex_data';
         
-        // إضافة المعلمات
-        params.apikey = this.apiKey;
-        Object.keys(params).forEach(key => {
-            url.searchParams.append(key, params[key]);
-        });
+        // التحقق من التخزين المؤقت أولاً
+        if (this.isCacheValid(cacheKey, 60)) {
+            const cached = this.getCachedData(cacheKey);
+            if (cached) {
+                console.log('استخدام البيانات المخزنة للعملات');
+                return cached;
+            }
+        }
         
         try {
-            // تحديث عداد الطلبات
-            Utils.updateRequestCount();
+            // طلب واحد لجميع العملات
+            const symbols = CONFIG.FOREX_PAIRS.join(',');
+            const response = await fetch(
+                `${this.baseURL}/exchange_rate?symbol=${symbols}&apikey=${this.apiKey}`
+            );
             
-            const response = await fetch(url.toString());
-            
-            if (!response.ok) {
-                throw new Error(`خطأ في الشبكة: ${response.status}`);
-            }
+            if (!response.ok) throw new Error('خطأ في الشبكة');
             
             const data = await response.json();
             
-            // التحقق من أخطاء API
-            if (data.code && data.code !== 200) {
-                throw new Error(data.message || 'خطأ في API');
-            }
+            // تحديث عداد الطلبات
+            this.updateRequestCounter();
+            
+            // تخزين البيانات
+            this.cacheData(cacheKey, data);
+            
+            // تخزين كل عملة بشكل منفصل أيضاً
+            CONFIG.FOREX_PAIRS.forEach(pair => {
+                if (data[pair]) {
+                    this.cacheData(`forex_${pair}`, data[pair]);
+                }
+            });
             
             return data;
-        } catch (error) {
-            console.error('خطأ في طلب API:', error);
             
-            // استخدام البيانات المخزنة في حالة الخطأ
-            return this.getCachedData(endpoint, params);
+        } catch (error) {
+            console.error('خطأ في جلب بيانات العملات:', error);
+            
+            // محاولة استخدام البيانات المخزنة
+            const cached = this.getCachedData(cacheKey);
+            if (cached) {
+                console.log('استخدام البيانات المخزنة بعد الخطأ');
+                return cached;
+            }
+            
+            // بيانات افتراضية في حالة الفشل
+            return this.getDefaultForexData();
+        }
+    }
+    
+    // جلب سعر صرف لعملتين
+    async getExchangeRate(from, to) {
+        const cacheKey = `rate_${from}_${to}`;
+        
+        // التحقق من التخزين المؤقت
+        if (this.isCacheValid(cacheKey, 5)) {
+            const cached = this.getCachedData(cacheKey);
+            if (cached) return cached;
+        }
+        
+        try {
+            const response = await fetch(
+                `${this.baseURL}/exchange_rate?symbol=${from}/${to}&apikey=${this.apiKey}`
+            );
+            
+            if (!response.ok) throw new Error('خطأ في الشبكة');
+            
+            const data = await response.json();
+            
+            // تحديث العداد
+            this.updateRequestCounter();
+            
+            // تخزين البيانات
+            this.cacheData(cacheKey, data);
+            
+            return data;
+            
+        } catch (error) {
+            console.error('خطأ في جلب سعر الصرف:', error);
+            
+            // محاولة الحساب من البيانات المخزنة
+            return this.calculateRateFromCache(from, to);
+        }
+    }
+    
+    // التحقق من صلاحية التخزين المؤقت
+    isCacheValid(key, minutes = 60) {
+        const cached = localStorage.getItem(key);
+        if (!cached) return false;
+        
+        try {
+            const data = JSON.parse(cached);
+            const now = Date.now();
+            const cacheAge = now - data.timestamp;
+            const maxAge = minutes * 60 * 1000;
+            
+            return cacheAge < maxAge;
+        } catch {
+            return false;
         }
     }
     
     // جلب البيانات المخزنة
-    getCachedData(endpoint, params) {
-        let cacheKey = '';
-        
-        if (endpoint.includes('/quote')) {
-            cacheKey = params.symbol ? `stock_${params.symbol}` : 'stocks';
-        } else if (endpoint.includes('/exchange_rate')) {
-            cacheKey = params.symbol ? `forex_${params.symbol}` : 'forex';
-        }
-        
-        if (cacheKey) {
-            const cached = Utils.getFromStorage(cacheKey);
-            if (cached) {
-                console.log(`استخدام البيانات المخزنة لـ ${cacheKey}`);
-                return cached.data;
-            }
-        }
-        
-        return null;
-    }
-    
-    // جلب سعر صرف عملة
-    async getExchangeRate(symbol) {
-        const cachedKey = `forex_${symbol}`;
-        
-        // التحقق من البيانات المخزنة
-        if (Utils.isDataValid(cachedKey)) {
-            const cached = Utils.getFromStorage(cachedKey);
-            if (cached) {
-                return cached.data;
-            }
-        }
-        
-        const data = await this.makeRequest('/exchange_rate', {
-            symbol: symbol
-        });
-        
-        if (data && data.rate) {
-            // تخزين البيانات
-            Utils.saveToStorage(cachedKey, {
-                data: data,
-                timestamp: new Date().getTime()
-            });
-        }
-        
-        return data;
-    }
-    
-    // جلب أسعار العملات دفعة واحدة (لتحسين الطلبات)
-    async getBatchForexRates(symbols) {
-        const results = {};
-        const toFetch = [];
-        
-        // التحقق من البيانات المخزنة أولاً
-        symbols.forEach(symbol => {
-            const cachedKey = `forex_${symbol}`;
-            
-            if (Utils.isDataValid(cachedKey)) {
-                const cached = Utils.getFromStorage(cachedKey);
-                if (cached && cached.data) {
-                    results[symbol] = cached.data;
-                } else {
-                    toFetch.push(symbol);
-                }
-            } else {
-                toFetch.push(symbol);
-            }
-        });
-        
-        // إذا كانت جميع البيانات مخزنة وصالحة
-        if (toFetch.length === 0) {
-            return results;
-        }
-        
-        // جلب البيانات الجديدة للمفقودة
+    getCachedData(key) {
         try {
-            // استخدام batch request إن أمكن
-            const batchData = await this.makeRequest('/exchange_rate', {
-                symbol: toFetch.join(',')
-            });
+            const cached = localStorage.getItem(key);
+            if (!cached) return null;
             
-            if (batchData && typeof batchData === 'object') {
-                Object.keys(batchData).forEach(key => {
-                    if (batchData[key] && batchData[key].rate) {
-                        const symbol = batchData[key].symbol;
-                        results[symbol] = batchData[key];
-                        
-                        // تخزين البيانات
-                        Utils.saveToStorage(`forex_${symbol}`, {
-                            data: batchData[key],
-                            timestamp: new Date().getTime()
-                        });
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('خطأ في جلب دفعة العملات:', error);
+            const data = JSON.parse(cached);
+            return data.data;
+        } catch {
+            return null;
         }
-        
-        return results;
     }
     
-    // جلب بيانات سهم
-    async getStockQuote(symbol) {
-        const cachedKey = `stock_${symbol}`;
-        
-        // التحقق من البيانات المخزنة
-        if (Utils.isDataValid(cachedKey, 30)) { // 30 دقيقة للأسهم
-            const cached = Utils.getFromStorage(cachedKey);
-            if (cached) {
-                return cached.data;
-            }
-        }
-        
-        const data = await this.makeRequest('/quote', {
-            symbol: symbol,
-            interval: '1day'
-        });
-        
-        if (data && data.symbol) {
-            // تخزين البيانات
-            Utils.saveToStorage(cachedKey, {
+    // تخزين البيانات
+    cacheData(key, data) {
+        try {
+            const cacheItem = {
                 data: data,
-                timestamp: new Date().getTime()
-            });
+                timestamp: Date.now()
+            };
+            localStorage.setItem(key, JSON.stringify(cacheItem));
+        } catch (error) {
+            console.error('خطأ في تخزين البيانات:', error);
         }
-        
-        return data;
     }
     
-    // جلب بيانات دفعة من الأسهم
-    async getBatchStockQuotes(symbols) {
-        const results = {};
-        const toFetch = [];
+    // تحديث عداد الطلبات
+    updateRequestCounter() {
+        const today = new Date().toDateString();
+        const requests = JSON.parse(localStorage.getItem('api_requests') || '{}');
         
-        // التحقق من البيانات المخزنة أولاً
-        symbols.forEach(symbol => {
-            const cachedKey = `stock_${symbol}`;
+        if (requests.date !== today) {
+            requests.date = today;
+            requests.count = 0;
+        }
+        
+        requests.count = (requests.count || 0) + 1;
+        localStorage.setItem('api_requests', JSON.stringify(requests));
+        
+        // تحديث العرض
+        const counter = document.getElementById('apiCounter');
+        if (counter) {
+            counter.textContent = `${requests.count}/800`;
+        }
+    }
+    
+    // بيانات افتراضية للعملات
+    getDefaultForexData() {
+        const defaultRates = {};
+        const baseRate = 1;
+        
+        CONFIG.FOREX_PAIRS.forEach(pair => {
+            const [from, to] = pair.split('/');
+            let rate = baseRate;
             
-            if (Utils.isDataValid(cachedKey, 30)) {
-                const cached = Utils.getFromStorage(cachedKey);
-                if (cached && cached.data) {
-                    results[symbol] = cached.data;
-                } else {
-                    toFetch.push(symbol);
-                }
-            } else {
-                toFetch.push(symbol);
-            }
+            // أسعار افتراضية تقريبية
+            const defaultRatesMap = {
+                'EUR/USD': 1.08, 'GBP/USD': 1.26, 'USD/JPY': 148.5,
+                'USD/CHF': 0.88, 'USD/CAD': 1.35, 'AUD/USD': 0.66,
+                'NZD/USD': 0.61, 'USD/CNY': 7.18, 'USD/AED': 3.67,
+                'USD/SAR': 3.75, 'USD/KWD': 0.31, 'USD/BHD': 0.38,
+                'USD/OMR': 0.38, 'USD/QAR': 3.64, 'USD/JOD': 0.71,
+                'USD/EGP': 30.9, 'USD/TRY': 32.1, 'USD/RUB': 92.5,
+                'USD/INR': 83.2, 'USD/ZAR': 18.9
+            };
+            
+            rate = defaultRatesMap[pair] || (from === 'USD' ? 1 : 0.92);
+            
+            defaultRates[pair] = {
+                symbol: pair,
+                rate: rate,
+                timestamp: Date.now()
+            };
         });
         
-        // إذا كانت جميع البيانات مخزنة وصالحة
-        if (toFetch.length === 0) {
-            return results;
-        }
-        
-        // جلب البيانات الجديدة للمفقودة (بحد أقصى 8 رموز في الطلب الواحد)
-        const batchSize = 8;
-        for (let i = 0; i < toFetch.length; i += batchSize) {
-            const batch = toFetch.slice(i, i + batchSize);
-            
-            try {
-                const batchData = await this.makeRequest('/quote', {
-                    symbol: batch.join(','),
-                    interval: '1day'
-                });
-                
-                if (batchData && typeof batchData === 'object') {
-                    Object.keys(batchData).forEach(key => {
-                        if (batchData[key] && batchData[key].symbol) {
-                            const symbol = batchData[key].symbol;
-                            results[symbol] = batchData[key];
-                            
-                            // تخزين البيانات
-                            Utils.saveToStorage(`stock_${symbol}`, {
-                                data: batchData[key],
-                                timestamp: new Date().getTime()
-                            });
-                        }
-                    });
-                }
-                
-                // تأخير بين الطلبات لتجنب rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
-            } catch (error) {
-                console.error(`خطأ في دفعة الأسهم ${i}:`, error);
-            }
-        }
-        
-        return results;
+        return defaultRates;
     }
     
-    // جلب سعر صرف بين عملتين للمحول
-    async getCurrencyConversion(from, to) {
-        const symbol = `${from}/${to}`;
-        const data = await this.getExchangeRate(symbol);
+    // حساب السعر من البيانات المخزنة
+    calculateRateFromCache(from, to) {
+        if (from === to) return { rate: 1 };
         
-        if (data && data.rate) {
-            return {
-                from: from,
-                to: to,
-                rate: parseFloat(data.rate),
-                timestamp: data.timestamp || new Date().getTime()
-            };
+        // محاولة العثور على سعر مباشر
+        const directKey = `rate_${from}_${to}`;
+        const directCached = this.getCachedData(directKey);
+        if (directCached) return directCached;
+        
+        // محاولة حساب عبر USD
+        const fromToUSD = this.getCachedData(`forex_${from}/USD`);
+        const usdToTo = this.getCachedData(`forex_USD/${to}`);
+        
+        if (fromToUSD && usdToTo) {
+            const rate = fromToUSD.rate * usdToTo.rate;
+            return { rate: rate };
         }
         
         return null;
     }
 }
 
-// إنشاء instance عام
 const apiService = new APIService();
