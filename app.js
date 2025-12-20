@@ -1,567 +1,306 @@
-// التطبيق الرئيسي
-
-class CurrencyStockApp {
+class ForexApp {
     constructor() {
-        this.apiService = apiService;
-        this.currentTab = 'forex';
+        this.api = apiService;
         this.forexData = {};
-        this.stocksData = {};
-        this.conversionRates = {};
-        
+        this.interval = null;
         this.init();
     }
     
     async init() {
-        // تهيئة التبويبات
-        this.setupTabs();
+        // إعداد التنقل
+        this.setupNavigation();
         
-        // تهيئة محول العملات
-        this.setupCurrencyConverter();
+        // إعداد البحث
+        this.setupSearch();
+        
+        // إعداد محول العملات
+        this.setupConverter();
         
         // تحميل البيانات الأولية
-        await this.loadInitialData();
+        await this.loadData();
         
         // إعداد التحديث التلقائي
-        this.setupAutoRefresh();
+        this.setupAutoUpdate();
         
-        // تحديث عرض طلبات API
-        this.updateAPIRequestDisplay();
-        
-        // تحديث وقت آخر تحديث
-        this.updateLastUpdateTime();
+        // تحديث العداد
+        this.updateRequestCounter();
     }
     
-    // إعداد التبويبات
-    setupTabs() {
-        const tabs = document.querySelectorAll('.tab');
+    async loadData() {
+        // جلب جميع بيانات العملات في طلب واحد
+        this.forexData = await this.api.getAllForexData();
         
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabId = tab.getAttribute('data-tab');
-                
-                // تحديث التبويب النشط
-                tabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                
-                // إظهار المحتوى المناسب
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(tabId).classList.add('active');
-                
-                this.currentTab = tabId;
-                
-                // تحميل بيانات التبويب إذا لزم
-                if (tabId === 'stocks' && Object.keys(this.stocksData).length === 0) {
-                    this.loadStocksData();
-                }
-            });
-        });
+        // تحديث العرض
+        this.updateForexDisplay();
         
-        // أزرار التحديث
-        document.getElementById('refreshForex').addEventListener('click', () => {
-            this.loadForexData(true);
-        });
+        // تحديث شريط العملات السريع
+        this.updateQuickBar();
         
-        document.getElementById('refreshStocks').addEventListener('click', () => {
-            this.loadStocksData(true);
-        });
+        // تحديث الإحصائيات
+        this.updateStats();
+        
+        // تحديث وقت التحديث
+        this.updateTime();
     }
     
-    // تحميل البيانات الأولية
-    async loadInitialData() {
-        // تحميل بيانات العملات
-        await this.loadForexData();
-        
-        // تحميل بيانات الأسهم (بتأخير لتقليل الحمل)
-        setTimeout(() => {
-            this.loadStocksData();
-        }, 2000);
-    }
-    
-    // تحميل بيانات العملات
-    async loadForexData(forceRefresh = false) {
-        const forexGrid = document.getElementById('forexGrid');
-        
-        // عرض حالة التحميل
-        forexGrid.innerHTML = `
-            <div class="loading" style="grid-column: 1/-1; text-align: center; padding: 40px;">
-                <i class="fas fa-spinner fa-spin fa-2x"></i>
-                <p>جار تحميل أسعار العملات...</p>
-            </div>
-        `;
-        
-        try {
-            // جلب رموز العملات
-            const symbols = CONFIG.FOREX_PAIRS.map(pair => pair.symbol);
-            
-            // جلب البيانات
-            const data = await this.apiService.getBatchForexRates(symbols);
-            this.forexData = data;
-            
-            // تحديث العرض
-            this.updateForexDisplay();
-            
-            // حفظ وقت التحديث
-            this.saveLastUpdate();
-            
-            // تحديث خيارات محول العملات
-            this.updateCurrencyConverterOptions();
-            
-        } catch (error) {
-            console.error('خطأ في تحميل بيانات العملات:', error);
-            forexGrid.innerHTML = `
-                <div class="error" style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ef4444;">
-                    <i class="fas fa-exclamation-triangle fa-2x"></i>
-                    <p>فشل تحميل بيانات العملات. تحقق من اتصال الإنترنت.</p>
-                </div>
-            `;
-        }
-    }
-    
-    // تحديث عرض العملات
     updateForexDisplay() {
-        const forexGrid = document.getElementById('forexGrid');
-        
-        if (!forexGrid || Object.keys(this.forexData).length === 0) return;
+        const container = document.getElementById('forexList');
+        if (!container || !this.forexData) return;
         
         let html = '';
         
-        CONFIG.FOREX_PAIRS.forEach(pair => {
-            const data = this.forexData[pair.symbol];
+        CONFIG.FOREX_PAIRS.forEach((pair, index) => {
+            const data = this.forexData[pair];
+            if (!data) return;
             
-            if (data && data.rate) {
-                // حساب التغيير (بسيط - في تطبيق حقيقي سيأتي من API)
-                const price = parseFloat(data.rate);
-                const change = (Math.random() - 0.5) * 0.01; // بيانات وهمية للتغيير
-                const changePercent = (change / price) * 100;
-                
-                const currency = {
-                    symbol: pair.symbol,
-                    name: pair.name,
-                    price: price,
-                    change: change,
-                    change_percent: changePercent
-                };
-                
-                html += Utils.createCurrencyCard(currency);
-            } else {
-                // عرض بيانات افتراضية في حالة عدم وجود بيانات
-                html += `
-                    <div class="currency-card">
-                        <div class="currency-info">
-                            <h3>${pair.symbol.replace('/USD', '')}</h3>
-                            <p>${pair.name}</p>
-                        </div>
-                        <div class="currency-price">
-                            <div class="price">--</div>
-                            <div class="change">لا توجد بيانات</div>
+            const [from, to] = pair.split('/');
+            const rate = parseFloat(data.rate) || 0;
+            const previousRate = this.getPreviousRate(pair);
+            const change = previousRate ? rate - previousRate : 0;
+            const changePercent = previousRate ? (change / previousRate) * 100 : 0;
+            
+            // سعر العرض والطلب (مبسط)
+            const bid = rate;
+            const ask = rate * 1.0002; // فرق بسيط
+            const high = rate * 1.001;
+            const low = rate * 0.999;
+            
+            html += `
+                <div class="forex-item">
+                    <div class="forex-symbol">
+                        <span class="currency-flag-small">${CONFIG.CURRENCY_FLAGS[from] || '🏳️'}</span>
+                        <div>
+                            <div class="currency-code">${pair}</div>
+                            <div class="currency-name">${CONFIG.CURRENCY_NAMES[from] || from} / ${CONFIG.CURRENCY_NAMES[to] || to}</div>
                         </div>
                     </div>
-                `;
-            }
+                    <div class="price-cell">${bid.toFixed(4)}</div>
+                    <div class="price-cell">${ask.toFixed(4)}</div>
+                    <div class="change-cell ${change >= 0 ? 'change-up' : 'change-down'}">
+                        ${change >= 0 ? '+' : ''}${change.toFixed(4)} (${changePercent.toFixed(2)}%)
+                    </div>
+                    <div class="price-cell">${high.toFixed(4)}</div>
+                    <div class="price-cell">${low.toFixed(4)}</div>
+                    <div class="time-cell">${this.formatTime(data.timestamp)}</div>
+                </div>
+            `;
         });
         
-        forexGrid.innerHTML = html;
+        container.innerHTML = html || '<div class="forex-item">لا توجد بيانات</div>';
     }
     
-    // تحميل بيانات الأسهم
-    async loadStocksData(forceRefresh = false) {
-        const stocksTableBody = document.getElementById('stocksTableBody');
+    updateQuickBar() {
+        const container = document.getElementById('quickPairs');
+        if (!container) return;
         
-        // عرض حالة التحميل
-        stocksTableBody.innerHTML = `
-            <tr>
-                <td colspan="7" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p>جار تحميل بيانات الأسهم...</p>
-                </td>
-            </tr>
-        `;
-        
-        try {
-            // جلب بيانات الأسهم
-            const data = await this.apiService.getBatchStockQuotes(CONFIG.STOCKS);
-            this.stocksData = data;
-            
-            // تحديث العرض
-            this.updateStocksDisplay();
-            
-            // إعداد البحث والتصفية
-            this.setupStockFilters();
-            
-            // حفظ وقت التحديث
-            this.saveLastUpdate();
-            
-        } catch (error) {
-            console.error('خطأ في تحميل بيانات الأسهم:', error);
-            stocksTableBody.innerHTML = `
-                <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px; color: #ef4444;">
-                        <i class="fas fa-exclamation-triangle fa-2x"></i>
-                        <p>فشل تحميل بيانات الأسهم. تحقق من اتصال الإنترنت.</p>
-                    </td>
-                </tr>
-            `;
-        }
-    }
-    
-    // تحديث عرض الأسهم
-    updateStocksDisplay(filteredStocks = null) {
-        const stocksTableBody = document.getElementById('stocksTableBody');
-        
-        if (!stocksTableBody) return;
-        
-        const stocksToDisplay = filteredStocks || Object.values(this.stocksData);
-        
-        if (stocksToDisplay.length === 0) {
-            stocksTableBody.innerHTML = `
-                <tr>
-                    <td colspan="7" style="text-align: center; padding: 20px;">
-                        لا توجد نتائج مطابقة للبحث
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        // ترتيب الأسهم حسب السعر (تنازلي)
-        const sortedStocks = stocksToDisplay
-            .filter(stock => stock && stock.symbol)
-            .sort((a, b) => {
-                const priceA = parseFloat(a.price) || 0;
-                const priceB = parseFloat(b.price) || 0;
-                return priceB - priceA;
-            });
-        
+        const quickPairs = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CAD', 'AUD/USD', 'USD/AED'];
         let html = '';
         
-        sortedStocks.forEach((stock, index) => {
-            if (stock && stock.symbol) {
-                // حساب التغيير
-                const price = parseFloat(stock.price) || 0;
-                const open = parseFloat(stock.open) || price;
-                const change = price - open;
-                const changePercent = open !== 0 ? (change / open) * 100 : 0;
-                
-                const stockWithChange = {
-                    ...stock,
-                    change: change,
-                    percent_change: changePercent
-                };
-                
-                html += Utils.createStockRow(stockWithChange, index);
-            }
+        quickPairs.forEach(pair => {
+            const data = this.forexData[pair];
+            if (!data) return;
+            
+            const rate = parseFloat(data.rate) || 0;
+            const previousRate = this.getPreviousRate(pair);
+            const change = previousRate ? rate - previousRate : 0;
+            
+            html += `
+                <div class="quick-pair" data-pair="${pair}">
+                    <span class="pair-symbol">${pair}</span>
+                    <span class="pair-price">${rate.toFixed(4)}</span>
+                    <span class="pair-change ${change >= 0 ? 'change-up' : 'change-down'}">
+                        ${change >= 0 ? '+' : ''}${change.toFixed(4)}
+                    </span>
+                </div>
+            `;
         });
         
-        stocksTableBody.innerHTML = html;
+        container.innerHTML = html;
     }
     
-    // إعداد البحث والتصفية للأسهم
-    setupStockFilters() {
-        const searchInput = document.getElementById('stockSearch');
-        const filterSelect = document.getElementById('stockFilter');
+    setupAutoUpdate() {
+        // تحديث كل ساعة
+        this.interval = setInterval(() => {
+            this.loadData();
+        }, CONFIG.UPDATE_INTERVAL);
         
-        if (!searchInput || !filterSelect) return;
-        
-        const applyFilters = () => {
-            const searchTerm = searchInput.value.toLowerCase();
-            const filterType = filterSelect.value;
-            
-            let filtered = Object.values(this.stocksData).filter(stock => {
-                if (!stock || !stock.symbol) return false;
-                
-                // البحث
-                const matchesSearch = stock.symbol.toLowerCase().includes(searchTerm) || 
-                                     (stock.name && stock.name.toLowerCase().includes(searchTerm));
-                
-                if (!matchesSearch) return false;
-                
-                // التصفية حسب النوع
-                if (filterType === 'all') return true;
-                
-                const price = parseFloat(stock.price) || 0;
-                const open = parseFloat(stock.open) || price;
-                const change = price - open;
-                
-                if (filterType === 'gainers') return change > 0;
-                if (filterType === 'losers') return change < 0;
-                
-                return true;
-            });
-            
-            this.updateStocksDisplay(filtered);
-        };
-        
-        searchInput.addEventListener('input', applyFilters);
-        filterSelect.addEventListener('change', applyFilters);
+        // تحديث الوقت كل دقيقة
+        setInterval(() => {
+            this.updateTime();
+        }, 60000);
     }
     
-    // إعداد محول العملات
-    setupCurrencyConverter() {
+    setupConverter() {
         const fromSelect = document.getElementById('fromCurrency');
         const toSelect = document.getElementById('toCurrency');
         const amountInput = document.getElementById('amount');
         const swapBtn = document.getElementById('swapCurrencies');
-        const convertBtn = document.getElementById('convertBtn');
-        const quickConversions = document.getElementById('quickConversions');
         
         // تعبئة خيارات العملات
-        this.updateCurrencyConverterOptions();
+        this.populateCurrencyOptions();
         
-        // تعيين القيم الافتراضية
-        fromSelect.value = 'USD';
-        toSelect.value = 'EUR';
+        // أحداث
+        [fromSelect, toSelect, amountInput].forEach(el => {
+            el.addEventListener('change', () => this.updateConversion());
+            el.addEventListener('input', () => this.updateConversion());
+        });
         
-        // حدث تبديل العملات
         swapBtn.addEventListener('click', () => {
-            const fromValue = fromSelect.value;
-            const toValue = toSelect.value;
+            const fromVal = fromSelect.value;
+            const toVal = toSelect.value;
             
-            fromSelect.value = toValue;
-            toSelect.value = fromValue;
+            fromSelect.value = toVal;
+            toSelect.value = fromVal;
             
-            this.performConversion();
+            // تحديث الأعلام
+            document.getElementById('fromFlag').textContent = CONFIG.CURRENCY_FLAGS[fromSelect.value] || '🏳️';
+            document.getElementById('toFlag').textContent = CONFIG.CURRENCY_FLAGS[toSelect.value] || '🏳️';
+            
+            this.updateConversion();
         });
         
-        // حدث التحويل
-        convertBtn.addEventListener('click', () => {
-            this.performConversion();
-        });
-        
-        // التحويل عند تغيير القيم
-        [fromSelect, toSelect, amountInput].forEach(element => {
-            element.addEventListener('change', () => {
-                this.performConversion();
-            });
-            
-            element.addEventListener('input', () => {
-                if (element === amountInput) {
-                    this.performConversion();
-                }
-            });
-        });
-        
-        // التحويلات السريعة
-        this.setupQuickConversions();
-        
-        // التحويل الأولي
-        setTimeout(() => {
-            this.performConversion();
-        }, 1000);
+        // تحديث التحويل الأولي
+        setTimeout(() => this.updateConversion(), 1000);
     }
     
-    // تحديث خيارات محول العملات
-    updateCurrencyConverterOptions() {
-        const fromSelect = document.getElementById('fromCurrency');
-        const toSelect = document.getElementById('toCurrency');
-        
-        if (!fromSelect || !toSelect) return;
-        
-        // مسح الخيارات الحالية
-        fromSelect.innerHTML = '';
-        toSelect.innerHTML = '';
-        
-        // إضافة خيارات العملات
-        CONFIG.POPULAR_CURRENCIES.forEach(currency => {
-            const option1 = document.createElement('option');
-            option1.value = currency.code;
-            option1.textContent = `${currency.flag} ${currency.code} - ${currency.name}`;
-            
-            const option2 = option1.cloneNode(true);
-            
-            fromSelect.appendChild(option1);
-            toSelect.appendChild(option2);
-        });
-    }
-    
-    // إعداد التحويلات السريعة
-    setupQuickConversions() {
-        const quickConversions = document.getElementById('quickConversions');
-        
-        if (!quickConversions) return;
-        
-        const conversions = [
-            { from: 'USD', to: 'EUR', amount: 100, label: '100 دولار إلى يورو' },
-            { from: 'USD', to: 'GBP', amount: 100, label: '100 دولار إلى جنيه' },
-            { from: 'EUR', to: 'USD', amount: 100, label: '100 يورو إلى دولار' },
-            { from: 'GBP', to: 'USD', amount: 100, label: '100 جنيه إلى دولار' },
-            { from: 'USD', to: 'AED', amount: 100, label: '100 دولار إلى درهم' },
-            { from: 'USD', to: 'SAR', amount: 100, label: '100 دولار إلى ريال' }
-        ];
-        
-        let html = '';
-        
-        conversions.forEach(conv => {
-            html += `
-                <div class="quick-conversion" data-from="${conv.from}" data-to="${conv.to}" data-amount="${conv.amount}">
-                    <h4>${conv.label}</h4>
-                    <p class="quick-result" id="quick_${conv.from}_${conv.to}">--</p>
-                </div>
-            `;
-        });
-        
-        quickConversions.innerHTML = html;
-        
-        // إضافة أحداث النقر
-        quickConversions.querySelectorAll('.quick-conversion').forEach(el => {
-            el.addEventListener('click', () => {
-                const from = el.getAttribute('data-from');
-                const to = el.getAttribute('data-to');
-                const amount = el.getAttribute('data-amount');
-                
-                document.getElementById('fromCurrency').value = from;
-                document.getElementById('toCurrency').value = to;
-                document.getElementById('amount').value = amount;
-                
-                this.performConversion();
-            });
-        });
-        
-        // تحديث التحويلات السريعة
-        this.updateQuickConversions();
-    }
-    
-    // تحديث التحويلات السريعة
-    async updateQuickConversions() {
-        const conversions = [
-            { from: 'USD', to: 'EUR' },
-            { from: 'USD', to: 'GBP' },
-            { from: 'EUR', to: 'USD' },
-            { from: 'GBP', to: 'USD' },
-            { from: 'USD', to: 'AED' },
-            { from: 'USD', to: 'SAR' }
-        ];
-        
-        for (const conv of conversions) {
-            const resultElement = document.getElementById(`quick_${conv.from}_${conv.to}`);
-            if (!resultElement) continue;
-            
-            try {
-                const conversion = await this.apiService.getCurrencyConversion(conv.from, conv.to);
-                if (conversion && conversion.rate) {
-                    const amount = 100;
-                    const converted = amount * conversion.rate;
-                    resultElement.textContent = `${Utils.formatNumber(converted, 2)} ${conv.to}`;
-                }
-            } catch (error) {
-                console.error(`خطأ في تحديث التحويل السريع ${conv.from} إلى ${conv.to}:`, error);
-            }
-        }
-    }
-    
-    // تنفيذ التحويل
-    async performConversion() {
-        const fromCurrency = document.getElementById('fromCurrency').value;
-        const toCurrency = document.getElementById('toCurrency').value;
+    async updateConversion() {
+        const from = document.getElementById('fromCurrency').value;
+        const to = document.getElementById('toCurrency').value;
         const amount = parseFloat(document.getElementById('amount').value) || 0;
-        const convertedAmountElement = document.getElementById('convertedAmount');
-        const conversionRateElement = document.getElementById('conversionRate');
         
-        if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) {
-            if (fromCurrency === toCurrency && amount > 0) {
-                convertedAmountElement.value = Utils.formatNumber(amount, 2);
-                conversionRateElement.textContent = `السعر: 1 ${fromCurrency} = 1 ${toCurrency}`;
-            }
+        if (from === to) {
+            document.getElementById('convertedAmount').textContent = amount.toFixed(2);
+            document.getElementById('exchangeRate').textContent = `1 ${from} = 1 ${to}`;
+            document.getElementById('inverseRate').textContent = `1 ${to} = 1 ${from}`;
             return;
         }
         
-        // عرض تحميل
-        convertedAmountElement.value = 'جار الحساب...';
-        conversionRateElement.textContent = 'جاري جلب سعر الصرف...';
-        
         try {
-            // جلب سعر الصرف
-            const conversion = await this.apiService.getCurrencyConversion(fromCurrency, toCurrency);
+            const rateData = await this.api.getExchangeRate(from, to);
+            const rate = rateData?.rate || 0;
             
-            if (conversion && conversion.rate) {
-                const rate = conversion.rate;
+            if (rate > 0) {
                 const converted = amount * rate;
-                
-                // تحديث النتائج
-                convertedAmountElement.value = Utils.formatNumber(converted, 2);
-                conversionRateElement.textContent = `السعر: 1 ${fromCurrency} = ${Utils.formatNumber(rate, 4)} ${toCurrency}`;
-                
-                // تخزين سعر الصرف
-                const key = `${fromCurrency}_${toCurrency}`;
-                this.conversionRates[key] = {
-                    rate: rate,
-                    timestamp: conversion.timestamp
-                };
-            } else {
-                throw new Error('لا توجد بيانات للتحويل');
+                document.getElementById('convertedAmount').textContent = converted.toFixed(2);
+                document.getElementById('exchangeRate').textContent = `1 ${from} = ${rate.toFixed(4)} ${to}`;
+                document.getElementById('inverseRate').textContent = `1 ${to} = ${(1/rate).toFixed(4)} ${from}`;
             }
         } catch (error) {
             console.error('خطأ في التحويل:', error);
-            convertedAmountElement.value = 'خطأ';
-            conversionRateElement.textContent = 'فشل جلب سعر الصرف';
         }
     }
     
-    // إعداد التحديث التلقائي
-    setupAutoRefresh() {
-        // تحديث بيانات العملات كل ساعة
-        setInterval(() => {
-            this.loadForexData(true);
-            
-            // تحديث الأسهم بعد 5 دقائق لتوزيع الطلبات
-            setTimeout(() => {
-                this.loadStocksData(true);
-            }, 5 * 60 * 1000);
-            
-            // تحديث وقت آخر تحديث
-            this.updateLastUpdateTime();
-        }, CONFIG.UPDATE_INTERVAL);
-        
-        // تحديث وقت العرض كل دقيقة
-        setInterval(() => {
-            this.updateLastUpdateTime();
-        }, 60 * 1000);
+    // أدوات مساعدة
+    getPreviousRate(pair) {
+        const cached = localStorage.getItem(`prev_${pair}`);
+        return cached ? parseFloat(cached) : null;
     }
     
-    // حفظ وقت آخر تحديث
-    saveLastUpdate() {
-        Utils.saveToStorage(CONFIG.STORAGE_KEYS.LAST_UPDATE, {
-            timestamp: new Date().getTime()
+    formatTime(timestamp) {
+        if (!timestamp) return '--:--';
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    updateTime() {
+        const now = new Date();
+        document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('ar-EG', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
         });
-        
-        this.updateLastUpdateTime();
+        document.getElementById('lastUpdateTime').textContent = now.toLocaleTimeString('ar-EG');
     }
     
-    // تحديث وقت العرض
-    updateLastUpdateTime() {
-        const lastUpdateElement = document.getElementById('lastUpdateTime');
-        if (!lastUpdateElement) return;
-        
-        const lastUpdate = Utils.getFromStorage(CONFIG.STORAGE_KEYS.LAST_UPDATE);
-        
-        if (lastUpdate && lastUpdate.timestamp) {
-            const timeStr = Utils.formatDateTime(lastUpdate.timestamp);
-            lastUpdateElement.textContent = `آخر تحديث: ${timeStr}`;
-        } else {
-            lastUpdateElement.textContent = `آخر تحديث: الآن`;
-        }
+    updateStats() {
+        // تحديث الإحصائيات
+        document.getElementById('totalCurrencies').textContent = CONFIG.FOREX_PAIRS.length;
+        // يمكن إضافة المزيد من الإحصائيات
     }
     
-    // تحديث عرض طلبات API
-    updateAPIRequestDisplay() {
-        const requests = Utils.getFromStorage(CONFIG.STORAGE_KEYS.API_REQUESTS) || {};
+    updateRequestCounter() {
+        const requests = JSON.parse(localStorage.getItem('api_requests') || '{}');
         const today = new Date().toDateString();
         
         if (requests.date !== today) {
             requests.date = today;
             requests.count = 0;
-            Utils.saveToStorage(CONFIG.STORAGE_KEYS.API_REQUESTS, requests);
+            localStorage.setItem('api_requests', JSON.stringify(requests));
         }
         
-        const display = document.getElementById('apiRequests');
-        if (display) {
-            display.textContent = `طلبات API اليومية: ${requests.count || 0}/800`;
+        const counter = document.getElementById('apiCounter');
+        if (counter) {
+            counter.textContent = `${requests.count || 0}/800`;
         }
+    }
+    
+    populateCurrencyOptions() {
+        const fromSelect = document.getElementById('fromCurrency');
+        const toSelect = document.getElementById('toCurrency');
+        
+        Object.keys(CONFIG.CURRENCY_NAMES).forEach(code => {
+            const option1 = document.createElement('option');
+            const option2 = document.createElement('option');
+            
+            option1.value = option2.value = code;
+            option1.textContent = option2.textContent = `${CONFIG.CURRENCY_FLAGS[code] || '🏳️'} ${code} - ${CONFIG.CURRENCY_NAMES[code]}`;
+            
+            fromSelect.appendChild(option1);
+            toSelect.appendChild(option2);
+        });
+        
+        // تعيين القيم الافتراضية
+        fromSelect.value = 'USD';
+        toSelect.value = 'EUR';
+        document.getElementById('fromFlag').textContent = CONFIG.CURRENCY_FLAGS.USD;
+        document.getElementById('toFlag').textContent = CONFIG.CURRENCY_FLAGS.EUR;
+    }
+    
+    setupNavigation() {
+        const navLinks = document.querySelectorAll('.header-nav a');
+        const sections = document.querySelectorAll('section');
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                const tab = link.getAttribute('data-tab');
+                
+                // تحديث الروابط النشطة
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                
+                // إظهار/إخفاء الأقسام
+                sections.forEach(section => {
+                    section.style.display = 'none';
+                });
+                
+                document.getElementById(`${tab}-section`).style.display = 'block';
+            });
+        });
+    }
+    
+    setupSearch() {
+        const searchInput = document.getElementById('forexSearch');
+        
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const items = document.querySelectorAll('.forex-item');
+            
+            items.forEach(item => {
+                const symbol = item.querySelector('.currency-code').textContent;
+                const name = item.querySelector('.currency-name').textContent;
+                
+                if (symbol.toLowerCase().includes(searchTerm) || name.toLowerCase().includes(searchTerm)) {
+                    item.style.display = 'grid';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
     }
 }
 
-// بدء التطبيق عند تحميل الصفحة
+// بدء التطبيق
 document.addEventListener('DOMContentLoaded', () => {
-    window.app = new CurrencyStockApp();
+    window.app = new ForexApp();
 });
