@@ -1,34 +1,34 @@
-# 💱 Currency & Gold Hub
+# تطبيق الأسهم والعملات
 
-A real-time currency converter and gold price tracker using FastForex and CurrencyFreaks APIs.
+تطبيق ويب متكامل لعرض أسعار العملات والتحويل بينها ومتابعة أسعار أهم الأسهم العالمية.
 
-![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)
-![GitHub stars](https://img.shields.io/github/stars/kettabcrypto-cmd/my-language-app)
-![GitHub last commit](https://img.shields.io/github/last-commit/kettabcrypto-cmd/my-language-app)
+## المميزات
 
-## ✨ Features
+1. **أسعار العملات**: عرض أسعار 10 عملات رئيسية مقابل الدولار الأمريكي مع تحديث كل ساعة.
+2. **محول العملات**: تحويل بين العملات المختلفة مع تحديث الأسعار تلقائياً.
+3. **الأسهم العالمية**: عرض قائمة بأهم 50 سهم عالمي مع تفاصيل الأسعار والتغيرات.
+4. **التحديث التلقائي**: تحديث البيانات كل ساعة مع تخزين محلي لتقليل استخدام API.
+5. **واجهة مستخدم عربية**: تصميم متجاوب وواجهة باللغة العربية.
 
-### 🪙 Currency Features
-- View all available currencies (170+ currencies)
-- Real-time exchange rates vs USD
-- Interactive currency converter
-- Historical rate comparison
+## التقنيات المستخدمة
 
-### 🥇 Gold & Silver Features
-- Live gold prices per ounce
-- Different karats (24k, 22k, 21k, 18k)
-- Silver price tracking
-- Automatic updates every 5 minutes
+- HTML5, CSS3, JavaScript (ES6+)
+- Twelve Data API
+- LocalStorage للتخزين المحلي
+- Font Awesome للأيقونات
 
-### 🛠️ Technical Features
-- Responsive design (mobile-friendly)
-- Arabic/English support
-- API caching for performance
-- Error handling and user feedback
+## التثبيت والاستخدام
 
-## 🚀 Live Demo
+1. قم بتنزيل جميع الملفات في مجلد واحد.
+2. افتح ملف `index.html` في متصفح الويب.
+3. سيبدأ التطبيق تلقائياً بتحميل البيانات.
 
-[View Live Demo](https://kettabcrypto-cmd.github.io/my-language-app/)
+## تكوين API
 
-## 📁 Project Structure
+المفتاح الافتراضي مضمن في `config.js`. يمكنك تغييره لمفتاحك الخاص من [Twelve Data](https://twelvedata.com).
 
+```javascript
+const CONFIG = {
+    API_KEY: 'مفتاحك_الخاص_هنا',
+    // ... إعدادات أخرى
+};
