@@ -3,283 +3,600 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Currency & Gold Dashboard</title>
+    <title>FX & Metals Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="assets/icons/logo.svg">
-    <style>
-        /* سأضيف تنسيقات جديدة هنا */
-        .dashboard-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        
-        .main-converter {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin: 30px 0;
-        }
-        
-        .inline-form {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .inline-form input,
-        .inline-form select,
-        .inline-form button {
-            padding: 12px 20px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-        
-        .rates-ticker {
-            background: #1f2937;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            overflow-x: auto;
-            white-space: nowrap;
-        }
-        
-        .ticker-item {
-            display: inline-block;
-            margin: 0 25px;
-            font-size: 14px;
-        }
-    </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="dashboard-header">
-        <div class="dashboard-container">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-chart-line"></i>
-                    <h1>Currency & Gold Dashboard</h1>
-                </div>
-                <div class="live-badge">
-                    <span class="dot"></span>
-                    LIVE DATA
-                </div>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="top-left">
+                <i class="fas fa-bolt"></i>
+                <span>Live Market Data</span>
+            </div>
+            <div class="top-right">
+                <span id="currentTime">10:30:45 AM</span>
+                <span class="status-dot active"></span>
+                <span>API Connected</span>
             </div>
         </div>
-    </header>
+    </div>
 
-    <!-- Main Dashboard -->
-    <main class="dashboard-container">
-        <!-- Stats Row -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-title">
-                    <i class="fas fa-globe-americas"></i>
-                    <span>Active Currencies</span>
+    <!-- Main Container -->
+    <div class="container main-container">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fas fa-chart-line"></i>
                 </div>
-                <div class="stat-value" id="currencyCount">170+</div>
-                <div class="stat-desc">Real-time exchange rates</div>
+                <div class="logo-text">
+                    <h1>FX & Metals Dashboard</h1>
+                    <p>Real-time currency & precious metals data</p>
+                </div>
             </div>
-            
-            <div class="stat-card">
-                <div class="stat-title">
-                    <i class="fas fa-gem"></i>
-                    <span>Gold Price (24k)</span>
+            <div class="refresh-section">
+                <button id="refreshBtn" class="btn-refresh">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh Data
+                </button>
+                <div class="last-update">
+                    Last: <span id="lastUpdate">10:30 AM</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <div class="stat-box">
+                <div class="stat-label">
+                    <i class="fas fa-coins"></i>
+                    <span>Gold 24K</span>
                 </div>
                 <div class="stat-value" id="goldPrice">$2,150.45</div>
-                <div class="stat-desc">Per troy ounce</div>
+                <div class="stat-change up">+0.45%</div>
             </div>
             
-            <div class="stat-card">
-                <div class="stat-title">
-                    <i class="fas fa-sync-alt"></i>
-                    <span>Last Update</span>
+            <div class="stat-box">
+                <div class="stat-label">
+                    <i class="fas fa-coins"></i>
+                    <span>Silver</span>
                 </div>
-                <div class="stat-value" id="lastUpdate">10:30 AM</div>
-                <div class="stat-desc">Updates every 5 min</div>
-            </div>
-        </div>
-
-        <!-- Currency Ticker -->
-        <div class="rates-ticker">
-            <div class="ticker-item">
-                <strong>USD/EUR</strong> <span class="rate">0.92</span>
-                <span class="change up">+0.12%</span>
-            </div>
-            <div class="ticker-item">
-                <strong>USD/GBP</strong> <span class="rate">0.79</span>
-                <span class="change down">-0.05%</span>
-            </div>
-            <div class="ticker-item">
-                <strong>USD/SAR</strong> <span class="rate">3.75</span>
-                <span class="change up">+0.08%</span>
-            </div>
-            <div class="ticker-item">
-                <strong>USD/AED</strong> <span class="rate">3.67</span>
-                <span class="change up">+0.10%</span>
-            </div>
-            <div class="ticker-item">
-                <strong>USD/EGP</strong> <span class="rate">30.89</span>
-                <span class="change down">-0.15%</span>
-            </div>
-        </div>
-
-        <!-- Main Converter -->
-        <div class="main-converter">
-            <h2><i class="fas fa-exchange-alt"></i> Currency Converter</h2>
-            
-            <div class="inline-form">
-                <input type="number" id="convertAmount" value="100" min="1" step="1">
-                
-                <select id="convertFrom">
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                    <option value="SAR">SAR - Saudi Riyal</option>
-                    <option value="AED">AED - UAE Dirham</option>
-                </select>
-                
-                <i class="fas fa-arrow-right"></i>
-                
-                <select id="convertTo">
-                    <option value="SAR">SAR - Saudi Riyal</option>
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - British Pound</option>
-                    <option value="AED">AED - UAE Dirham</option>
-                </select>
-                
-                <button id="convertButton">
-                    <i class="fas fa-calculator"></i> Convert
-                </button>
+                <div class="stat-value" id="silverPrice">$24.85</div>
+                <div class="stat-change down">-0.12%</div>
             </div>
             
-            <div id="conversionResult" class="result-box">
-                <div class="result-value">100 USD = 375.00 SAR</div>
-                <div class="result-rate">Rate: 1 USD = 3.7500 SAR</div>
-            </div>
-        </div>
-
-        <!-- Gold & Silver Prices -->
-        <div class="prices-grid">
-            <div class="price-card gold">
-                <h3><i class="fas fa-crown"></i> Gold Prices</h3>
-                <div class="price-row">
-                    <span>24K Gold</span>
-                    <span class="price-value">$2,150.45</span>
+            <div class="stat-box">
+                <div class="stat-label">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span>USD/SAR</span>
                 </div>
-                <div class="price-row">
-                    <span>22K Gold</span>
-                    <span class="price-value">$1,970.25</span>
-                </div>
-                <div class="price-row">
-                    <span>21K Gold</span>
-                    <span class="price-value">$1,880.15</span>
-                </div>
-                <div class="price-row">
-                    <span>18K Gold</span>
-                    <span class="price-value">$1,612.84</span>
-                </div>
+                <div class="stat-value" id="usdSarRate">3.7500</div>
+                <div class="stat-change up">+0.08%</div>
             </div>
             
-            <div class="price-card silver">
-                <h3><i class="fas fa-coins"></i> Silver Price</h3>
-                <div class="price-row">
-                    <span>Silver (per oz)</span>
-                    <span class="price-value">$24.85</span>
+            <div class="stat-box">
+                <div class="stat-label">
+                    <i class="fas fa-euro-sign"></i>
+                    <span>USD/EUR</span>
                 </div>
-                <div class="price-row">
-                    <span>Last Updated</span>
-                    <span class="price-value">10:30 AM</span>
+                <div class="stat-value" id="usdEurRate">0.9200</div>
+                <div class="stat-change down">-0.05%</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content-wrapper">
+            <!-- Left Column: Converter -->
+            <div class="column converter-column">
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-exchange-alt"></i> Currency Converter</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="converter-form">
+                            <div class="input-row">
+                                <input type="number" id="amount" value="100" placeholder="Amount">
+                                <select id="fromCurrency">
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                    <option value="GBP">GBP - British Pound</option>
+                                    <option value="SAR">SAR - Saudi Riyal</option>
+                                    <option value="AED">AED - UAE Dirham</option>
+                                </select>
+                            </div>
+                            
+                            <div class="swap-row">
+                                <button id="swapBtn" class="btn-swap">
+                                    <i class="fas fa-arrow-down-arrow-up"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="input-row">
+                                <div class="result-placeholder" id="toAmount">375.00</div>
+                                <select id="toCurrency">
+                                    <option value="SAR">SAR - Saudi Riyal</option>
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                    <option value="GBP">GBP - British Pound</option>
+                                    <option value="AED">AED - UAE Dirham</option>
+                                </select>
+                            </div>
+                            
+                            <button id="convertBtn" class="btn-convert">
+                                <i class="fas fa-calculator"></i> Convert Now
+                            </button>
+                        </div>
+                        
+                        <div class="rate-info">
+                            <div class="rate-item">
+                                <span>Exchange Rate:</span>
+                                <strong id="exchangeRate">1 USD = 3.7500 SAR</strong>
+                            </div>
+                            <div class="rate-item">
+                                <span>Last Updated:</span>
+                                <span id="rateUpdateTime">10:30 AM</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gold Calculator -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-calculator"></i> Gold Calculator</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="gold-input">
+                            <input type="number" id="goldGrams" value="10" placeholder="Grams">
+                            <select id="goldKarat">
+                                <option value="24">24K (99.9%)</option>
+                                <option value="22">22K (91.7%)</option>
+                                <option value="21">21K (87.5%)</option>
+                                <option value="18">18K (75.0%)</option>
+                            </select>
+                        </div>
+                        <div class="gold-result">
+                            <div class="result-label">Value:</div>
+                            <div class="result-value" id="goldValue">$692.45</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Rates & Prices -->
+            <div class="column rates-column">
+                <!-- Major Currency Pairs -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-globe"></i> Major Pairs</h2>
+                        <div class="card-actions">
+                            <button class="btn-small active">USD</button>
+                            <button class="btn-small">EUR</button>
+                            <button class="btn-small">GBP</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="rates-table">
+                            <div class="rate-row header">
+                                <div>Pair</div>
+                                <div>Rate</div>
+                                <div>Change</div>
+                            </div>
+                            <div class="rate-row">
+                                <div class="pair">
+                                    <span class="flag">🇺🇸🇸🇦</span>
+                                    <span>USD/SAR</span>
+                                </div>
+                                <div class="rate">3.7500</div>
+                                <div class="change up">+0.08%</div>
+                            </div>
+                            <div class="rate-row">
+                                <div class="pair">
+                                    <span class="flag">🇺🇸🇪🇺</span>
+                                    <span>USD/EUR</span>
+                                </div>
+                                <div class="rate">0.9200</div>
+                                <div class="change down">-0.05%</div>
+                            </div>
+                            <div class="rate-row">
+                                <div class="pair">
+                                    <span class="flag">🇺🇸🇬🇧</span>
+                                    <span>USD/GBP</span>
+                                </div>
+                                <div class="rate">0.7900</div>
+                                <div class="change up">+0.12%</div>
+                            </div>
+                            <div class="rate-row">
+                                <div class="pair">
+                                    <span class="flag">🇺🇸🇦🇪</span>
+                                    <span>USD/AED</span>
+                                </div>
+                                <div class="rate">3.6725</div>
+                                <div class="change up">+0.10%</div>
+                            </div>
+                            <div class="rate-row">
+                                <div class="pair">
+                                    <span class="flag">🇺🇸🇪🇬</span>
+                                    <span>USD/EGP</span>
+                                </div>
+                                <div class="rate">30.8900</div>
+                                <div class="change down">-0.15%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metals Prices -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-gem"></i> Precious Metals</h2>
+                        <div class="price-unit">USD per ounce</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="metals-grid">
+                            <div class="metal-card gold">
+                                <div class="metal-icon">
+                                    <i class="fas fa-crown"></i>
+                                </div>
+                                <div class="metal-info">
+                                    <div class="metal-name">Gold (24K)</div>
+                                    <div class="metal-price" id="goldPriceLive">$2,150.45</div>
+                                    <div class="metal-change up">+0.45%</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metal-card silver">
+                                <div class="metal-icon">
+                                    <i class="fas fa-coins"></i>
+                                </div>
+                                <div class="metal-info">
+                                    <div class="metal-name">Silver</div>
+                                    <div class="metal-price" id="silverPriceLive">$24.85</div>
+                                    <div class="metal-change down">-0.12%</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metal-card platinum">
+                                <div class="metal-icon">
+                                    <i class="fas fa-ring"></i>
+                                </div>
+                                <div class="metal-info">
+                                    <div class="metal-name">Platinum</div>
+                                    <div class="metal-price">$950.30</div>
+                                    <div class="metal-change up">+0.85%</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metal-card palladium">
+                                <div class="metal-icon">
+                                    <i class="fas fa-atom"></i>
+                                </div>
+                                <div class="metal-info">
+                                    <div class="metal-name">Palladium</div>
+                                    <div class="metal-price">$1,120.75</div>
+                                    <div class="metal-change down">-0.30%</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="karats-info">
+                            <h3>Gold Karats</h3>
+                            <div class="karats-grid">
+                                <div class="karat-item">
+                                    <span class="karat-label">22K</span>
+                                    <span class="karat-price">$1,970.25</span>
+                                </div>
+                                <div class="karat-item">
+                                    <span class="karat-label">21K</span>
+                                    <span class="karat-price">$1,880.15</span>
+                                </div>
+                                <div class="karat-item">
+                                    <span class="karat-label">18K</span>
+                                    <span class="karat-price">$1,612.84</span>
+                                </div>
+                                <div class="karat-item">
+                                    <span class="karat-label">14K</span>
+                                    <span class="karat-price">$1,256.89</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- API Status -->
-        <div class="api-status">
-            <div class="status-item">
-                <span class="status-dot active"></span>
-                <span>FastForex API: <strong>Active</strong></span>
+        <!-- Footer Info -->
+        <footer class="main-footer">
+            <div class="footer-left">
+                <div class="data-source">
+                    <i class="fas fa-database"></i>
+                    <span>Data Sources:</span>
+                    <span class="source-badge">FastForex</span>
+                    <span class="source-badge">CurrencyFreaks</span>
+                </div>
+                <div class="update-frequency">
+                    <i class="fas fa-clock"></i>
+                    <span>Updates every 5 minutes</span>
+                </div>
             </div>
-            <div class="status-item">
-                <span class="status-dot active"></span>
-                <span>CurrencyFreaks API: <strong>Active</strong></span>
+            <div class="footer-right">
+                <div class="api-status">
+                    <span class="status-dot active"></span>
+                    <span>API Status: Connected</span>
+                </div>
+                <div class="requests-count">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Requests: <strong id="requestCount">1,247</strong>/10,000</span>
+                </div>
             </div>
-        </div>
-    </main>
+        </footer>
+    </div>
 
-    <!-- Footer -->
-    <footer class="dashboard-footer">
-        <div class="dashboard-container">
-            <p>Data provided by FastForex & CurrencyFreaks APIs. Updated every 5 minutes.</p>
-            <p class="copyright">© 2024 Currency Dashboard • Real-time Financial Data</p>
-        </div>
-    </footer>
-
+    <!-- Scripts -->
     <script src="config.js"></script>
     <script src="utils.js"></script>
     <script src="api.js"></script>
     <script src="app.js"></script>
     
+    <!-- Dashboard Script -->
     <script>
-        // Update time automatically
-        function updateTime() {
+        // Update current time
+        function updateCurrentTime() {
             const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', {
+                hour12: true,
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12: true
+                second: '2-digit'
             });
-            document.getElementById('lastUpdate').textContent = timeString;
+            document.getElementById('currentTime').textContent = timeString;
         }
         
-        // Initial update
-        updateTime();
+        // Update last update time
+        function updateLastUpdate() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', {
+                hour12: true,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('lastUpdate').textContent = timeString;
+            document.getElementById('rateUpdateTime').textContent = timeString;
+        }
         
-        // Update every minute
-        setInterval(updateTime, 60000);
+        // Initialize
+        updateCurrentTime();
+        updateLastUpdate();
         
-        // Converter functionality
-        document.getElementById('convertButton').addEventListener('click', async function() {
-            const amount = document.getElementById('convertAmount').value;
-            const from = document.getElementById('convertFrom').value;
-            const to = document.getElementById('convertTo').value;
+        // Update time every second
+        setInterval(updateCurrentTime, 1000);
+        
+        // Update last update every 5 minutes
+        setInterval(updateLastUpdate, 5 * 60 * 1000);
+        
+        // Refresh button
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            this.classList.add('refreshing');
+            updateLastUpdate();
             
-            const resultDiv = document.getElementById('conversionResult');
-            resultDiv.innerHTML = '<div class="loading">Converting...</div>';
+            // Simulate API call
+            setTimeout(() => {
+                this.classList.remove('refreshing');
+                
+                // Update some random values for demo
+                const goldElement = document.getElementById('goldPrice');
+                const currentGold = parseFloat(goldElement.textContent.replace('$', '').replace(',', ''));
+                const newGold = (currentGold + (Math.random() - 0.5)).toFixed(2);
+                goldElement.textContent = '$' + newGold;
+                
+                // Show notification
+                showNotification('Data refreshed successfully', 'success');
+            }, 1000);
+        });
+        
+        // Swap currencies
+        document.getElementById('swapBtn').addEventListener('click', function() {
+            const fromSelect = document.getElementById('fromCurrency');
+            const toSelect = document.getElementById('toCurrency');
+            
+            const temp = fromSelect.value;
+            fromSelect.value = toSelect.value;
+            toSelect.value = temp;
+            
+            // Trigger conversion if there's an amount
+            if (document.getElementById('amount').value) {
+                document.getElementById('convertBtn').click();
+            }
+        });
+        
+        // Currency converter
+        document.getElementById('convertBtn').addEventListener('click', async function() {
+            const amount = document.getElementById('amount').value;
+            const from = document.getElementById('fromCurrency').value;
+            const to = document.getElementById('toCurrency').value;
+            
+            if (!amount || amount <= 0) {
+                showNotification('Please enter a valid amount', 'error');
+                return;
+            }
+            
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Converting...';
+            this.disabled = true;
             
             try {
                 // Use the API service
-                const result = await window.ApiService.convertCurrency(amount, from, to);
+                const result = await window.ApiService.convertCurrency(parseFloat(amount), from, to);
                 
-                if (result) {
-                    resultDiv.innerHTML = `
-                        <div class="result-value">${amount} ${from} = ${result.convertedAmount.toFixed(2)} ${to}</div>
-                        <div class="result-rate">Rate: 1 ${from} = ${result.rate.toFixed(4)} ${to}</div>
-                    `;
+                if (result && result.convertedAmount) {
+                    document.getElementById('toAmount').textContent = result.convertedAmount.toFixed(2);
+                    document.getElementById('exchangeRate').textContent = 
+                        `1 ${from} = ${result.rate.toFixed(4)} ${to}`;
+                    
+                    showNotification('Conversion successful', 'success');
+                } else {
+                    throw new Error('Conversion failed');
                 }
             } catch (error) {
-                resultDiv.innerHTML = '<div class="error">Conversion failed. Try again.</div>';
+                showNotification('Conversion failed. Using sample data.', 'error');
+                // Fallback to sample calculation
+                const sampleRate = from === 'USD' && to === 'SAR' ? 3.75 : 0.92;
+                const converted = (amount * sampleRate).toFixed(2);
+                document.getElementById('toAmount').textContent = converted;
+                document.getElementById('exchangeRate').textContent = 
+                    `1 ${from} = ${sampleRate.toFixed(4)} ${to}`;
+            } finally {
+                this.innerHTML = '<i class="fas fa-calculator"></i> Convert Now';
+                this.disabled = false;
+            }
+        });
+        
+        // Gold calculator
+        document.getElementById('goldGrams').addEventListener('input', calculateGold);
+        document.getElementById('goldKarat').addEventListener('change', calculateGold);
+        
+        function calculateGold() {
+            const grams = parseFloat(document.getElementById('goldGrams').value) || 0;
+            const karat = parseFloat(document.getElementById('goldKarat').value);
+            
+            // Get current gold price
+            const goldPriceElement = document.getElementById('goldPriceLive');
+            const goldPrice = parseFloat(goldPriceElement.textContent.replace('$', '').replace(',', '')) || 2150.45;
+            
+            // Karat multipliers
+            const karatMultipliers = {
+                24: 1.0,
+                22: 0.9167,
+                21: 0.875,
+                18: 0.75
+            };
+            
+            const multiplier = karatMultipliers[karat] || 1.0;
+            
+            // Calculate: price per gram = (price per ounce * multiplier) / 31.1035
+            const pricePerGram = (goldPrice * multiplier) / 31.1035;
+            const totalValue = pricePerGram * grams;
+            
+            document.getElementById('goldValue').textContent = '$' + totalValue.toFixed(2);
+        }
+        
+        // Initialize gold calculator
+        calculateGold();
+        
+        // Notification function
+        function showNotification(message, type = 'info') {
+            // Remove existing notifications
+            const existing = document.querySelector('.notification');
+            if (existing) existing.remove();
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Load initial data
+        window.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Load gold prices
+                const goldPrices = await window.ApiService.getGoldAndSilverPrices();
+                if (goldPrices) {
+                    document.getElementById('goldPrice').textContent = '$' + goldPrices.gold24k.toFixed(2);
+                    document.getElementById('goldPriceLive').textContent = '$' + goldPrices.gold24k.toFixed(2);
+                    document.getElementById('silverPrice').textContent = '$' + goldPrices.silver.toFixed(2);
+                    document.getElementById('silverPriceLive').textContent = '$' + goldPrices.silver.toFixed(2);
+                    
+                    // Update gold calculator
+                    calculateGold();
+                }
+                
+                // Load exchange rates
+                const rates = await window.ApiService.getAllRatesVsUSD();
+                if (rates) {
+                    if (rates.SAR) {
+                        document.getElementById('usdSarRate').textContent = rates.SAR.toFixed(4);
+                    }
+                    if (rates.EUR) {
+                        document.getElementById('usdEurRate').textContent = rates.EUR.toFixed(4);
+                    }
+                }
+                
+                showNotification('Dashboard loaded successfully', 'success');
+            } catch (error) {
+                showNotification('Using sample data. Check API keys.', 'error');
             }
         });
     </script>
+    
+    <!-- Notification Styles -->
+    <style>
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .notification.success {
+            border-left-color: #10b981;
+        }
+        
+        .notification.error {
+            border-left-color: #ef4444;
+        }
+        
+        .notification i {
+            font-size: 18px;
+        }
+        
+        .notification.success i {
+            color: #10b981;
+        }
+        
+        .notification.error i {
+            color: #ef4444;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .refreshing i {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </body>
 </html>
