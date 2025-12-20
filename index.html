@@ -3,15 +3,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تعلم اللغات</title>
-    <link rel="stylesheet" href="style.css">
+    <title>💱 مركز العملات والذهب - Currency & Gold Hub</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/logo.svg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div id="app">
-        <!-- سيتغير بالجافاسكريبت -->
-    </div>
-    
+    <!-- الهيدر -->
+    <header class="main-header">
+        <div class="container">
+            <div class="logo">
+                <img src="assets/icons/logo.svg" alt="شعار العملات" class="logo-icon">
+                <h1>مركز العملات والذهب</h1>
+                <span class="subtitle">Currency & Gold Hub</span>
+            </div>
+            <nav class="main-nav">
+                <a href="#currencies" class="nav-link active">
+                    <i class="fas fa-coins"></i> العملات
+                </a>
+                <a href="#converter" class="nav-link">
+                    <i class="fas fa-exchange-alt"></i> المحول
+                </a>
+                <a href="#gold" class="nav-link">
+                    <i class="fas fa-gem"></i> الذهب
+                </a>
+                <a href="#about" class="nav-link">
+                    <i class="fas fa-info-circle"></i> عن المشروع
+                </a>
+            </nav>
+            <div class="last-update">
+                <i class="fas fa-sync-alt"></i>
+                <span id="updateTime">--:--</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="container">
+        <!-- رسالة التحميل -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>جاري تحميل البيانات...</p>
+        </div>
+
+        <!-- قسم 1: جميع العملات المتاحة -->
+        <section id="currencies" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-globe-americas"></i> جميع العملات المتاحة</h2>
+                <p class="section-desc">قائمة بجميع العملات المدعومة في النظام</p>
+            </div>
+            <div id="currencyList" class="content-box">
+                <!-- سيتم ملؤها بـ JavaScript -->
+            </div>
+        </section>
+
+        <!-- قسم 2: العملات مقابل الدولار -->
+        <section id="rates" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-dollar-sign"></i> العملات مقابل الدولار الأمريكي (USD)</h2>
+                <p class="section-desc">أسعار الصرف الحالية مقابل الدولار</p>
+            </div>
+            <div id="ratesTable" class="content-box">
+                <!-- سيتم ملؤها بـ JavaScript -->
+            </div>
+        </section>
+
+        <!-- قسم 3: محول العملات -->
+        <section id="converter" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-calculator"></i> محول العملات</h2>
+                <p class="section-desc">تحويل بين أي عملتين مباشرة</p>
+            </div>
+            <div class="content-box">
+                <div class="converter-container">
+                    <div class="input-group">
+                        <label for="amount">
+                            <i class="fas fa-money-bill-wave"></i> المبلغ:
+                        </label>
+                        <input type="number" id="amount" value="100" min="0.01" step="0.01" placeholder="أدخل المبلغ">
+                    </div>
+
+                    <div class="currency-selectors">
+                        <div class="selector-box">
+                            <label for="fromCurrency">
+                                <i class="fas fa-arrow-right"></i> من:
+                            </label>
+                            <select id="fromCurrency" class="currency-select">
+                                <!-- سيتم ملؤها بـ JavaScript -->
+                            </select>
+                            <span class="currency-flag" id="fromFlag">🇺🇸</span>
+                        </div>
+
+                        <div class="swap-button">
+                            <button id="swapBtn" class="btn-swap">
+                                <i class="fas fa-exchange-alt"></i>
+                            </button>
+                        </div>
+
+                        <div class="selector-box">
+                            <label for="toCurrency">
+                                <i class="fas fa-arrow-left"></i> إلى:
+                            </label>
+                            <select id="toCurrency" class="currency-select">
+                                <!-- سيتم ملؤها بـ JavaScript -->
+                            </select>
+                            <span class="currency-flag" id="toFlag">🇸🇦</span>
+                        </div>
+                    </div>
+
+                    <button id="convertBtn" class="btn-convert">
+                        <i class="fas fa-sync-alt"></i> تحويل الآن
+                    </button>
+
+                    <div id="result" class="result-box">
+                        <!-- نتيجة التحويل تظهر هنا -->
+                    </div>
+
+                    <div class="converter-info">
+                        <p><i class="fas fa-info-circle"></i> يتم تحديث الأسعار كل 5 دقائق</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- قسم 4: أسعار الذهب والفضة -->
+        <section id="gold" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-gem"></i> أسعار الذهب والفضة</h2>
+                <p class="section-desc">أسعار المعادن الثمينة والعيارات المختلفة</p>
+            </div>
+            <div id="goldPrices" class="content-box">
+                <!-- سيتم ملؤها بـ JavaScript -->
+            </div>
+        </section>
+
+        <!-- قسم 5: عن المشروع -->
+        <section id="about" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-info-circle"></i> عن المشروع</h2>
+            </div>
+            <div class="content-box">
+                <div class="about-content">
+                    <h3>مركز العملات والذهب</h3>
+                    <p>منصة متكاملة لتحويل العملات ومتابعة أسعار الذهب والفضة باستخدام أحدث APIs العالمية.</p>
+                    
+                    <div class="features">
+                        <div class="feature">
+                            <i class="fas fa-bolt"></i>
+                            <h4>بيانات مباشرة</h4>
+                            <p>أسعار حية من FastForex و CurrencyFreaks</p>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-sync-alt"></i>
+                            <h4>تحديث تلقائي</h4>
+                            <p>تحديث البيانات كل 5 دقائق</p>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-shield-alt"></i>
+                            <h4>آمن وسريع</h4>
+                            <p>لا يتم تخزين بياناتك الشخصية</p>
+                        </div>
+                    </div>
+
+                    <div class="apis-used">
+                        <h4>الـ APIs المستخدمة:</h4>
+                        <div class="api-badges">
+                            <span class="api-badge fastforex">FastForex API</span>
+                            <span class="api-badge currencyfreaks">CurrencyFreaks API</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- الفوتر -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>روابط سريعة</h4>
+                    <a href="#currencies">العملات</a>
+                    <a href="#converter">المحول</a>
+                    <a href="#gold">الذهب</a>
+                    <a href="#about">عن المشروع</a>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>المصادر</h4>
+                    <a href="https://fastforex.io" target="_blank">FastForex</a>
+                    <a href="https://currencyfreaks.com" target="_blank">CurrencyFreaks</a>
+                    <a href="https://github.com/kettabcrypto-cmd/my-language-app" target="_blank">GitHub</a>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>معلومات</h4>
+                    <p>هذا المشروع تعليمي ومجاني</p>
+                    <p>© 2024 مركز العملات والذهب</p>
+                    <p>تم التطوير بواسطة kettabcrypto-cmd</p>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>💡 ملاحظة: الأسعار لأغراض إعلامية وقد تختلف عن الأسعار الفعلية.</p>
+                <p class="api-status">
+                    <i class="fas fa-circle" id="apiStatus"></i>
+                    <span id="statusText">حالة الـ API: جاري التحقق...</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- الروابط للجافاسكريبت -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="api.js"></script>
     <script src="app.js"></script>
+    
+    <!-- كود إضافي -->
+    <script>
+        // تحديث وقت التحميل
+        document.getElementById('updateTime').textContent = new Date().toLocaleTimeString('ar-SA');
+        
+        // زر تبديل العملات
+        document.getElementById('swapBtn').addEventListener('click', function() {
+            const fromSelect = document.getElementById('fromCurrency');
+            const toSelect = document.getElementById('toCurrency');
+            const fromFlag = document.getElementById('fromFlag');
+            const toFlag = document.getElementById('toFlag');
+            
+            // تبديل القيم
+            const temp = fromSelect.value;
+            fromSelect.value = toSelect.value;
+            toSelect.value = temp;
+            
+            // تبديل الأعلام (بشكل بسيط)
+            const tempFlag = fromFlag.textContent;
+            fromFlag.textContent = toFlag.textContent;
+            toFlag.textContent = tempFlag;
+            
+            // إذا كان هناك نتيجة، قم بتحديثها
+            const resultDiv = document.getElementById('result');
+            if (resultDiv.innerHTML.includes('نتيجة التحويل')) {
+                document.getElementById('convertBtn').click();
+            }
+        });
+        
+        // إخفاء رسالة التحميل بعد 2 ثانية
+        setTimeout(() => {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.opacity = '0';
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 500);
+            }
+        }, 2000);
+        
+        // تحديث حالة الـ API
+        setTimeout(() => {
+            const statusIcon = document.getElementById('apiStatus');
+            const statusText = document.getElementById('statusText');
+            statusIcon.style.color = '#10B981'; // أخضر
+            statusText.textContent = 'حالة الـ API: نشط';
+        }, 3000);
+    </script>
 </body>
 </html>
