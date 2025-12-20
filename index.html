@@ -1,142 +1,238 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أسعار العملات المباشرة</title>
+    <title>FX Markets | Real-Time Currency Rates</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header Bar مثل TradingView -->
-    <header class="trading-header">
+    <!-- Top Status Bar -->
+    <div class="status-bar">
+        <div class="status-left">
+            <div class="market-status">
+                <span class="status-dot live"></span>
+                <span class="status-text">LIVE MARKET</span>
+            </div>
+            <div class="update-info">
+                <i class="fas fa-sync-alt"></i>
+                <span>Auto-Update: </span>
+                <span id="nextUpdate">60:00</span>
+            </div>
+        </div>
+        
+        <div class="status-center">
+            <div class="server-time">
+                <i class="fas fa-clock"></i>
+                <span id="serverTime">--:--:--</span>
+                <span class="timezone">UTC</span>
+            </div>
+        </div>
+        
+        <div class="status-right">
+            <div class="api-counter">
+                <i class="fas fa-database"></i>
+                <span>API: </span>
+                <span id="apiCount">0</span>
+                <span>/800</span>
+            </div>
+            <div class="last-update">
+                <i class="fas fa-history"></i>
+                <span>Updated: </span>
+                <span id="lastUpdateTime">--:--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Header -->
+    <header class="main-header">
         <div class="header-left">
             <div class="logo">
-                <i class="fas fa-chart-line"></i>
-                <span>FX RATES</span>
+                <div class="logo-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="logo-text">
+                    <span class="logo-primary">FX</span>
+                    <span class="logo-secondary">MARKETS</span>
+                </div>
             </div>
-            <nav class="header-nav">
-                <a href="#" class="active" data-tab="forex">العملات</a>
-                <a href="#" data-tab="converter">المحول</a>
+            
+            <nav class="main-nav">
+                <a href="#forex" class="nav-item active" data-tab="forex">
+                    <i class="fas fa-coins"></i>
+                    <span>FOREX</span>
+                </a>
+                <a href="#converter" class="nav-item" data-tab="converter">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>CONVERTER</span>
+                </a>
+                <a href="#watchlist" class="nav-item" data-tab="watchlist">
+                    <i class="fas fa-star"></i>
+                    <span>WATCHLIST</span>
+                </a>
             </nav>
         </div>
         
-        <div class="header-center">
-            <div class="market-status">
-                <span class="status-indicator active"></span>
-                <span id="marketStatus">السوق مفتوح</span>
-            </div>
-            <div class="update-time" id="updateTime">
-                آخر تحديث: <span id="lastUpdate">--:--</span>
-            </div>
-        </div>
-        
         <div class="header-right">
-            <div class="api-counter">
-                <i class="fas fa-database"></i>
-                <span id="apiCounter">0/800</span>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="globalSearch" placeholder="Search currency...">
             </div>
-            <div class="time-zone">
-                <i class="fas fa-clock"></i>
-                <span>UTC+3</span>
-            </div>
+            <button class="refresh-btn" id="refreshData">
+                <i class="fas fa-redo"></i>
+                <span>Refresh</span>
+            </button>
         </div>
     </header>
 
-    <!-- محتوى العملات الرئيسي -->
-    <main class="trading-main">
-        <!-- شريط التحكم -->
-        <div class="control-bar">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="forexSearch" placeholder="ابحث عن عملة...">
-            </div>
-            <div class="view-toggle">
-                <button class="view-btn active" data-view="grid">
-                    <i class="fas fa-th"></i>
-                </button>
-                <button class="view-btn" data-view="list">
-                    <i class="fas fa-list"></i>
-                </button>
-            </div>
+    <!-- Quick Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-label">TOTAL PAIRS</span>
+            <span class="stat-value" id="totalPairs">20</span>
         </div>
+        <div class="stat-item">
+            <span class="stat-label">TOP GAINER</span>
+            <span class="stat-value gain" id="topGainer">EUR/USD +0.42%</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">TOP LOSER</span>
+            <span class="stat-value loss" id="topLoser">USD/JPY -0.28%</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">VOLATILITY</span>
+            <span class="stat-value" id="volatility">MEDIUM</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">SPREAD AVG</span>
+            <span class="stat-value" id="avgSpread">1.2 pips</span>
+        </div>
+    </div>
 
-        <!-- قسم أسعار العملات -->
-        <section id="forex-section" class="active">
-            <div class="forex-container">
-                <!-- شريط العملات السريع -->
-                <div class="quick-forex-bar">
-                    <div class="quick-forex">
-                        <span class="quick-label">الأكثر تداولاً:</span>
-                        <div class="quick-pairs" id="quickPairs">
-                            <!-- سيتم ملؤها -->
-                        </div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Forex Market Section -->
+        <section id="forex-section" class="content-section active">
+            <div class="section-header">
+                <h2><i class="fas fa-globe-americas"></i> FOREX MARKET</h2>
+                <div class="section-controls">
+                    <div class="view-toggle">
+                        <button class="view-btn active" data-view="all">
+                            <i class="fas fa-th"></i>
+                            ALL
+                        </button>
+                        <button class="view-btn" data-view="majors">
+                            <i class="fas fa-star"></i>
+                            MAJORS
+                        </button>
+                        <button class="view-btn" data-view="minors">
+                            <i class="fas fa-circle"></i>
+                            MINORS
+                        </button>
+                        <button class="view-btn" data-view="exotics">
+                            <i class="fas fa-globe-asia"></i>
+                            EXOTICS
+                        </button>
+                    </div>
+                    <div class="sort-controls">
+                        <select id="sortBy" class="sort-select">
+                            <option value="symbol">SYMBOL</option>
+                            <option value="price">PRICE</option>
+                            <option value="change">CHANGE</option>
+                            <option value="volume">VOLUME</option>
+                        </select>
+                        <select id="sortOrder" class="sort-select">
+                            <option value="asc">ASC</option>
+                            <option value="desc">DESC</option>
+                        </select>
                     </div>
                 </div>
+            </div>
 
-                <!-- شبكة العملات الرئيسية -->
-                <div class="forex-market">
-                    <!-- رأس الجدول -->
-                    <div class="market-header">
-                        <div class="market-col symbol">الرمز</div>
-                        <div class="market-col bid">السعر</div>
-                        <div class="market-col ask">العرض</div>
-                        <div class="market-col change">التغيير</div>
-                        <div class="market-col high">الأعلى</div>
-                        <div class="market-col low">الأدنى</div>
-                        <div class="market-col time">الوقت</div>
-                    </div>
-
-                    <!-- قائمة العملات -->
-                    <div class="market-list" id="forexList">
-                        <!-- سيتم ملؤها -->
-                    </div>
+            <!-- Market Table -->
+            <div class="market-table-container">
+                <div class="table-wrapper">
+                    <table class="market-table">
+                        <thead>
+                            <tr>
+                                <th class="col-symbol">
+                                    <i class="fas fa-hashtag"></i>
+                                    SYMBOL
+                                </th>
+                                <th class="col-bid">
+                                    <i class="fas fa-arrow-down"></i>
+                                    BID
+                                </th>
+                                <th class="col-ask">
+                                    <i class="fas fa-arrow-up"></i>
+                                    ASK
+                                </th>
+                                <th class="col-change">
+                                    <i class="fas fa-chart-line"></i>
+                                    CHANGE
+                                </th>
+                                <th class="col-high">
+                                    <i class="fas fa-caret-up"></i>
+                                    HIGH
+                                </th>
+                                <th class="col-low">
+                                    <i class="fas fa-caret-down"></i>
+                                    LOW
+                                </th>
+                                <th class="col-time">
+                                    <i class="fas fa-clock"></i>
+                                    TIME
+                                </th>
+                                <th class="col-actions">
+                                    <i class="fas fa-cog"></i>
+                                    ACTIONS
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="marketTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
                 </div>
+            </div>
 
-                <!-- إحصائيات -->
-                <div class="market-stats">
-                    <div class="stat-card">
-                        <div class="stat-title">عدد العملات</div>
-                        <div class="stat-value" id="totalCurrencies">10</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-title">الأعلى ارتفاعاً</div>
-                        <div class="stat-value positive" id="topGainer">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-title">الأعلى انخفاضاً</div>
-                        <div class="stat-value negative" id="topLoser">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-title">آخر تحديث</div>
-                        <div class="stat-value" id="lastUpdateTime">--:--</div>
-                    </div>
+            <!-- Quick Pairs -->
+            <div class="quick-pairs">
+                <h3><i class="fas fa-bolt"></i> QUICK VIEW</h3>
+                <div class="pairs-grid" id="quickPairsGrid">
+                    <!-- Quick pairs will be loaded here -->
                 </div>
             </div>
         </section>
 
-        <!-- قسم محول العملات -->
-        <section id="converter-section">
-            <div class="converter-container">
-                <div class="converter-header">
-                    <h2><i class="fas fa-exchange-alt"></i> محول العملات الفوري</h2>
+        <!-- Converter Section -->
+        <section id="converter-section" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-calculator"></i> CURRENCY CONVERTER</h2>
+                <div class="section-controls">
                     <div class="converter-info">
-                        <span id="converterUpdate">أسعار محدثة لحظياً</span>
+                        <span id="converterStatus">Real-time rates</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="converter-body">
+            <div class="converter-container">
+                <div class="converter-card">
                     <div class="converter-inputs">
                         <div class="input-group">
-                            <div class="input-label">من</div>
-                            <div class="currency-selector">
-                                <select id="fromCurrency" class="currency-select">
-                                    <!-- سيتم ملؤها -->
-                                </select>
-                                <div class="currency-flag" id="fromFlag">🇺🇸</div>
+                            <div class="input-label">AMOUNT</div>
+                            <div class="amount-input">
+                                <input type="number" id="amount" value="1000" min="0" step="0.01">
+                                <div class="currency-select">
+                                    <select id="fromCurrency">
+                                        <!-- Currencies will be loaded -->
+                                    </select>
+                                    <div class="currency-flag" id="fromFlag">🇺🇸</div>
+                                </div>
                             </div>
-                            <input type="number" id="amount" value="100" min="0" step="0.01">
                         </div>
 
                         <div class="swap-container">
@@ -146,63 +242,105 @@
                         </div>
 
                         <div class="input-group">
-                            <div class="input-label">إلى</div>
-                            <div class="currency-selector">
-                                <select id="toCurrency" class="currency-select">
-                                    <!-- سيتم ملؤها -->
-                                </select>
-                                <div class="currency-flag" id="toFlag">🇪🇺</div>
+                            <div class="input-label">CONVERT TO</div>
+                            <div class="amount-input">
+                                <div class="converted-amount" id="convertedAmount">0.00</div>
+                                <div class="currency-select">
+                                    <select id="toCurrency">
+                                        <!-- Currencies will be loaded -->
+                                    </select>
+                                    <div class="currency-flag" id="toFlag">🇪🇺</div>
+                                </div>
                             </div>
-                            <div class="converted-amount" id="convertedAmount">--</div>
                         </div>
                     </div>
 
                     <div class="converter-details">
                         <div class="rate-info">
-                            <span>سعر الصرف:</span>
-                            <strong id="exchangeRate">1 USD = -- EUR</strong>
-                        </div>
-                        <div class="inverse-rate">
-                            <span>المعكوس:</span>
-                            <span id="inverseRate">1 EUR = -- USD</span>
+                            <div class="rate-item">
+                                <span class="rate-label">EXCHANGE RATE</span>
+                                <span class="rate-value" id="exchangeRate">1 USD = 0.00 EUR</span>
+                            </div>
+                            <div class="rate-item">
+                                <span class="rate-label">INVERSE RATE</span>
+                                <span class="rate-value" id="inverseRate">1 EUR = 0.00 USD</span>
+                            </div>
+                            <div class="rate-item">
+                                <span class="rate-label">SPREAD</span>
+                                <span class="rate-value" id="rateSpread">0.0000</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- تحويلات سريعة -->
-                    <div class="quick-converter">
-                        <h3><i class="fas fa-bolt"></i> تحويلات سريعة</h3>
-                        <div class="quick-buttons" id="quickButtons">
-                            <!-- سيتم ملؤها -->
+                    <!-- Popular Conversions -->
+                    <div class="popular-conversions">
+                        <h3><i class="fas fa-fire"></i> POPULAR CONVERSIONS</h3>
+                        <div class="conversion-grid" id="popularConversions">
+                            <!-- Popular conversions will be loaded here -->
                         </div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Watchlist Section -->
+        <section id="watchlist-section" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-star"></i> MY WATCHLIST</h2>
+                <div class="section-controls">
+                    <button class="btn-primary" id="addToWatchlist">
+                        <i class="fas fa-plus"></i>
+                        ADD PAIR
+                    </button>
+                </div>
+            </div>
+            
+            <div class="watchlist-container">
+                <div class="empty-watchlist" id="emptyWatchlist">
+                    <i class="fas fa-star"></i>
+                    <h3>Your watchlist is empty</h3>
+                    <p>Add currency pairs to monitor their performance</p>
+                    <button class="btn-secondary" id="browsePairs">
+                        <i class="fas fa-search"></i>
+                        BROWSE PAIRS
+                    </button>
+                </div>
+                <div class="watchlist-table" id="watchlistTable" style="display: none;">
+                    <!-- Watchlist will be loaded here -->
                 </div>
             </div>
         </section>
     </main>
 
     <!-- Footer -->
-    <footer class="trading-footer">
+    <footer class="main-footer">
         <div class="footer-content">
-            <div class="provider-info">
-                <span>مصدر البيانات:</span>
-                <img src="https://twelvedata.com/static/img/twelvedata-logo.svg" alt="Twelve Data" class="provider-logo">
-                <span>Twelve Data API</span>
+            <div class="footer-left">
+                <div class="data-provider">
+                    <span>Data Provider:</span>
+                    <img src="https://twelvedata.com/static/img/twelvedata-logo.svg" alt="Twelve Data" class="provider-logo">
+                    <span>Twelve Data API</span>
+                </div>
             </div>
-            <div class="data-info">
-                <span>تحديث تلقائي كل ساعة</span>
-                <span>•</span>
-                <span>بيانات الوقت الحقيقي</span>
-                <span>•</span>
-                <span>دعم 150+ عملة</span>
+            
+            <div class="footer-center">
+                <div class="footer-info">
+                    <span><i class="fas fa-shield-alt"></i> SSL Secured</span>
+                    <span><i class="fas fa-bolt"></i> Real-time Data</span>
+                    <span><i class="fas fa-sync"></i> Auto-refresh 60min</span>
+                </div>
             </div>
-            <div class="copyright">
-                © 2024 أسعار العملات المباشرة | تحديث كل 60 دقيقة
+            
+            <div class="footer-right">
+                <div class="copyright">
+                    © 2024 FX Markets v2.0 | Professional Trading Interface
+                </div>
             </div>
         </div>
     </footer>
 
+    <!-- JavaScript Files -->
     <script src="config.js"></script>
-    <script src="utils.js"></script>
     <script src="api.js"></script>
     <script src="app.js"></script>
 </body>
