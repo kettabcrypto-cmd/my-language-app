@@ -360,4 +360,152 @@ class DashboardApp {
         }
     }
 
-    startAutoRefresh
+    startAutoRefresh() {
+        // Refresh every 5 minutes (300000 ms)
+        setInterval(() => {
+            console.log('🔄 Auto-refreshing data...');
+            this.loadDashboardData();
+        }, 5 * 60 * 1000);
+        
+        console.log('⏰ Auto-refresh scheduled every 5 minutes');
+    }
+
+    updateLastUpdateTime() {
+        const now = new Date();
+        this.lastUpdate = now;
+        
+        const timeString = now.toLocaleTimeString('en-US', {
+            hour12: true,
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        this.updateElementText('lastUpdate', timeString);
+        this.updateElementText('rateUpdateTime', timeString);
+    }
+
+    updateRequestCount() {
+        // Simulate request count (in a real app, this would come from API)
+        const requestCount = Math.floor(Math.random() * 500) + 1000;
+        this.updateElementText('requestCount', requestCount.toLocaleString());
+    }
+
+    updateElementText(elementId, text) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+    showNotification(message, type = 'info') {
+        // Check if notification system exists
+        if (typeof window.showNotification === 'function') {
+            window.showNotification(message, type);
+        } else {
+            // Fallback notification
+            console.log(`${type.toUpperCase()}: ${message}`);
+            
+            // Create simple notification
+            const notification = document.createElement('div');
+            notification.className = `simple-notification ${type}`;
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                z-index: 1000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideIn 0.3s ease;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    }
+
+    debouncedConvert = this.debounce(() => {
+        this.convertCurrency();
+    }, 500);
+
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    loadSampleData() {
+        console.log('📋 Loading sample data for demo...');
+        this.loadSampleMetalsData();
+        this.loadSampleRatesData();
+    }
+
+    loadSampleMetalsData() {
+        // Sample metals data
+        const sampleMetals = {
+            gold24k: 2150.45,
+            gold22k: 1970.25,
+            gold21k: 1880.15,
+            gold18k: 1612.84,
+            silver: 24.85
+        };
+        
+        this.updateElementText('goldPrice', `$${sampleMetals.gold24k.toFixed(2)}`);
+        this.updateElementText('goldPriceLive', `$${sampleMetals.gold24k.toFixed(2)}`);
+        this.updateElementText('silverPrice', `$${sampleMetals.silver.toFixed(2)}`);
+        this.updateElementText('silverPriceLive', `$${sampleMetals.silver.toFixed(2)}`);
+        
+        // Update karats
+        const karatPrices = {
+            '22K': sampleMetals.gold22k,
+            '21K': sampleMetals.gold21k,
+            '18K': sampleMetals.gold18k,
+            '14K': sampleMetals.gold24k * 0.583
+        };
+        
+        const karatItems = document.querySelectorAll('.karat-price');
+        if (karatItems.length > 0) {
+            const karats = ['22K', '21K', '18K', '14K'];
+            karatItems.forEach((item, index) => {
+                item.textContent = `$${karatPrices[karats[index]].toFixed(2)}`;
+            });
+        }
+    }
+
+    loadSampleRatesData() {
+        // Sample rates data
+        this.updateElementText('usdSarRate', '3.7500');
+        this.updateElementText('usdEurRate', '0.9200');
+        
+        // Trigger conversion with sample data
+        const amount = document.getElementById('amount').value;
+        if (amount && amount > 0) {
+            setTimeout(() => this.convertCurrency(), 1000);
+        }
+    }
+}
+
+// Initialize the dashboard when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    window.DashboardApp = new DashboardApp();
+});
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = DashboardApp;
+}
