@@ -1,21 +1,40 @@
-MIT License
 
-Copyright (c) 2024 kettabcrypto-cmd
+---
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## **8. `README_AR.md`** (ملف التعليمات بالعربية)
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+```markdown
+# تطبيق الأسهم والعملات
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+تطبيق ويب متكامل لعرض أسعار العملات والتحويل بينها ومتابعة أسعار أهم الأسهم العالمية.
+
+## المميزات
+
+1. **أسعار العملات**: عرض أسعار 10 عملات رئيسية مقابل الدولار الأمريكي مع تحديث كل ساعة.
+2. **محول العملات**: تحويل بين العملات المختلفة مع تحديث الأسعار تلقائياً.
+3. **الأسهم العالمية**: عرض قائمة بأهم 50 سهم عالمي مع تفاصيل الأسعار والتغيرات.
+4. **التحديث التلقائي**: تحديث البيانات كل ساعة مع تخزين محلي لتقليل استخدام API.
+5. **واجهة مستخدم عربية**: تصميم متجاوب وواجهة باللغة العربية.
+
+## التقنيات المستخدمة
+
+- HTML5, CSS3, JavaScript (ES6+)
+- Twelve Data API
+- LocalStorage للتخزين المحلي
+- Font Awesome للأيقونات
+
+## التثبيت والاستخدام
+
+1. قم بتنزيل جميع الملفات في مجلد واحد.
+2. افتح ملف `index.html` في متصفح الويب.
+3. سيبدأ التطبيق تلقائياً بتحميل البيانات.
+
+## تكوين API
+
+المفتاح الافتراضي مضمن في `config.js`. يمكنك تغييره لمفتاحك الخاص من [Twelve Data](https://twelvedata.com).
+
+```javascript
+const CONFIG = {
+    API_KEY: 'مفتاحك_الخاص_هنا',
+    // ... إعدادات أخرى
+};
