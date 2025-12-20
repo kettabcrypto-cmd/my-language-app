@@ -1,39 +1,53 @@
-// ملف: config.js
+// إعدادات التطبيق
 const CONFIG = {
-    // FastForex API Key
-    FASTFOREX_API_KEY: 'a84dfa8537-e4b5434d4a-t7k7n9',
+    API_KEY: 'b83fce53976843bbb59336c03f9a6a30',
+    API_BASE_URL: 'https://api.twelvedata.com',
     
-    // CurrencyFreaks API Key  
-    CURRENCYFREAKS_API_KEY: '2aec41d715fc4955a226b320fbc2ca0f',
+    // العملات المطلوبة (10 عملات مقابل USD)
+    FOREX_PAIRS: [
+        { symbol: 'EUR/USD', name: 'يورو/دولار' },
+        { symbol: 'GBP/USD', name: 'جنيه/دولار' },
+        { symbol: 'JPY/USD', name: 'ين/دولار' },
+        { symbol: 'CHF/USD', name: 'فرنك/دولار' },
+        { symbol: 'CAD/USD', name: 'دولار كندي/دولار' },
+        { symbol: 'AUD/USD', name: 'دولار أسترالي/دولار' },
+        { symbol: 'NZD/USD', name: 'دولار نيوزيلندي/دولار' },
+        { symbol: 'CNY/USD', name: 'يوان/دولار' },
+        { symbol: 'AED/USD', name: 'درهم/دولار' },
+        { symbol: 'SAR/USD', name: 'ريال/دولار' }
+    ],
     
-    // إعدادات FastForex
-    FASTFOREX: {
-        BASE_URL: 'https://api.fastforex.io',
-        ENDPOINTS: {
-            CURRENCIES: '/currencies',
-            FETCH_ALL: '/fetch-all',
-            CONVERT: '/convert'
-        }
+    // رموز الأسهم العالمية (50 سهم)
+    STOCKS: [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'BRK.B', 'JNJ', 'JPM',
+        'V', 'PG', 'UNH', 'HD', 'MA', 'DIS', 'ADBE', 'PYPL', 'NFLX', 'CRM',
+        'BAC', 'XOM', 'CSCO', 'PFE', 'VZ', 'INTC', 'ABT', 'TMO', 'WMT', 'CVX',
+        'MRK', 'PEP', 'KO', 'T', 'ABBV', 'AVGO', 'COST', 'DHR', 'MDT', 'NKE',
+        'ORCL', 'ACN', 'LIN', 'AMD', 'IBM', 'QCOM', 'TXN', 'UPS', 'CAT', 'SPY'
+    ],
+    
+    // تحديث البيانات كل ساعة (مللي ثانية)
+    UPDATE_INTERVAL: 60 * 60 * 1000,
+    
+    // تخزين محلي
+    STORAGE_KEYS: {
+        FOREX_DATA: 'forex_data',
+        STOCKS_DATA: 'stocks_data',
+        LAST_UPDATE: 'last_update',
+        API_REQUESTS: 'api_requests'
     },
     
-    // إعدادات CurrencyFreaks
-    CURRENCYFREAKS: {
-        BASE_URL: 'https://api.currencyfreaks.com/v2.0',
-        ENDPOINTS: {
-            LATEST: '/rates/latest',
-            HISTORICAL: '/rates/historical'
-        }
-    },
-    
-    // إعدادات التطبيق
-    APP: {
-        CACHE_DURATION: 5 * 60 * 1000, // 5 دقائق
-        DEFAULT_CURRENCY: 'USD',
-        SUPPORTED_CURRENCIES: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'EGP']
-    }
+    // العملات للمحول
+    POPULAR_CURRENCIES: [
+        { code: 'USD', name: 'الدولار الأمريكي', flag: '🇺🇸' },
+        { code: 'EUR', name: 'اليورو', flag: '🇪🇺' },
+        { code: 'GBP', name: 'الجنيه الإسترليني', flag: '🇬🇧' },
+        { code: 'JPY', name: 'الين الياباني', flag: '🇯🇵' },
+        { code: 'CAD', name: 'الدولار الكندي', flag: '🇨🇦' },
+        { code: 'AUD', name: 'الدولار الأسترالي', flag: '🇦🇺' },
+        { code: 'CHF', name: 'الفرنك السويسري', flag: '🇨🇭' },
+        { code: 'CNY', name: 'اليوان الصيني', flag: '🇨🇳' },
+        { code: 'AED', name: 'الدرهم الإماراتي', flag: '🇦🇪' },
+        { code: 'SAR', name: 'الريال السعودي', flag: '🇸🇦' }
+    ]
 };
-
-// تصدير الإعدادات
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = CONFIG;
-}
