@@ -1,77 +1,86 @@
+// التكوين الأساسي للتطبيق
 const CONFIG = {
-    API_KEY: 'b83fce53976843bbb59336c03f9a6a30',
-    API_BASE_URL: 'https://api.twelvedata.com',
+    // روابط الصور من GitHub
+    IMAGE_BASE_URL: "https://raw.githubusercontent.com/jamalkatabeuro-sketch/My-website/main/flags/",
     
-    // Forex Pairs (20 major pairs)
-    FOREX_PAIRS: [
-        'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'USD/CAD',
-        'AUD/USD', 'NZD/USD', 'USD/CNY', 'USD/AED', 'USD/SAR',
-        'USD/KWD', 'USD/BHD', 'USD/OMR', 'USD/QAR', 'USD/JOD',
-        'USD/EGP', 'USD/TRY', 'USD/RUB', 'USD/INR', 'USD/ZAR'
+    // TwelveData API
+    TWELVEDATA_API_KEY: "b83fce53976843bbb59336c03f9a6a30",
+    TWELVEDATA_API_URL: "https://api.twelvedata.com/exchange_rate",
+    
+    // إعدادات التحديث
+    REFRESH_INTERVAL: 60 * 60 * 1000, // تحديث كل ساعة (60 دقيقة)
+    CACHE_DURATION: 55 * 60 * 1000, // تخزين البيانات لمدة 55 دقيقة
+    
+    // العملات المتاحة في التطبيق
+    DEFAULT_CURRENCIES: [
+        { code: "USD", name: "US Dollar", symbol: "$", flag: "usd.png" },
+        { code: "EUR", name: "Euro", symbol: "€", flag: "eur.png" },
+        { code: "GBP", name: "British Pound", symbol: "£", flag: "gbp.png" },
+        { code: "JPY", name: "Japanese Yen", symbol: "¥", flag: "jpy.png" },
+        { code: "CAD", name: "Canadian Dollar", symbol: "CA$", flag: "cad.png" },
+        { code: "AUD", name: "Australian Dollar", symbol: "A$", flag: "aud.png" },
+        { code: "CHF", name: "Swiss Franc", symbol: "CHF", flag: "chf.png" },
+        { code: "CNY", name: "Chinese Yuan", symbol: "¥", flag: "cny.png" },
+        { code: "AED", name: "UAE Dirham", symbol: "د.إ", flag: "aed.png" },
+        { code: "SAR", name: "Saudi Riyal", symbol: "ر.س", flag: "sar.png" },
+        { code: "QAR", name: "Qatari Riyal", symbol: "ر.ق", flag: "qar.png" },
+        { code: "EGP", name: "Egyptian Pound", symbol: "£", flag: "egp.png" },
+        { code: "TRY", name: "Turkish Lira", symbol: "₺", flag: "try.png" },
+        { code: "INR", name: "Indian Rupee", symbol: "₹", flag: "inr.png" },
+        { code: "RUB", name: "Russian Ruble", symbol: "₽", flag: "rub.png" },
+        { code: "BRL", name: "Brazilian Real", symbol: "R$", flag: "brl.png" },
+        { code: "ZAR", name: "South African Rand", symbol: "R", flag: "zar.png" },
+        { code: "MXN", name: "Mexican Peso", symbol: "$", flag: "mxn.png" }
     ],
     
-    // Currency Names in English
-    CURRENCY_NAMES: {
-        'USD': 'US Dollar',
-        'EUR': 'Euro',
-        'GBP': 'British Pound',
-        'JPY': 'Japanese Yen',
-        'CHF': 'Swiss Franc',
-        'CAD': 'Canadian Dollar',
-        'AUD': 'Australian Dollar',
-        'NZD': 'New Zealand Dollar',
-        'CNY': 'Chinese Yuan',
-        'AED': 'UAE Dirham',
-        'SAR': 'Saudi Riyal',
-        'KWD': 'Kuwaiti Dinar',
-        'BHD': 'Bahraini Dinar',
-        'OMR': 'Omani Rial',
-        'QAR': 'Qatari Riyal',
-        'JOD': 'Jordanian Dinar',
-        'EGP': 'Egyptian Pound',
-        'TRY': 'Turkish Lira',
-        'RUB': 'Russian Ruble',
-        'INR': 'Indian Rupee',
-        'ZAR': 'South African Rand'
-    },
-    
-    // Currency Flags
-    CURRENCY_FLAGS: {
-        'USD': '🇺🇸', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵',
-        'CHF': '🇨🇭', 'CAD': '🇨🇦', 'AUD': '🇦🇺', 'NZD': '🇳🇿',
-        'CNY': '🇨🇳', 'AED': '🇦🇪', 'SAR': '🇸🇦', 'KWD': '🇰🇼',
-        'BHD': '🇧🇭', 'OMR': '🇴🇲', 'QAR': '🇶🇦', 'JOD': '🇯🇴',
-        'EGP': '🇪🇬', 'TRY': '🇹🇷', 'RUB': '🇷🇺', 'INR': '🇮🇳',
-        'ZAR': '🇿🇦'
-    },
-    
-    // Popular conversions for quick buttons
-    POPULAR_CONVERSIONS: [
-        { from: 'USD', to: 'EUR', amount: 1000, label: 'USD to EUR' },
-        { from: 'EUR', to: 'USD', amount: 1000, label: 'EUR to USD' },
-        { from: 'USD', to: 'GBP', amount: 1000, label: 'USD to GBP' },
-        { from: 'GBP', to: 'USD', amount: 1000, label: 'GBP to USD' },
-        { from: 'USD', to: 'AED', amount: 1000, label: 'USD to AED' },
-        { from: 'USD', to: 'SAR', amount: 1000, label: 'USD to SAR' },
-        { from: 'USD', to: 'EGP', amount: 1000, label: 'USD to EGP' },
-        { from: 'USD', to: 'JPY', amount: 1000, label: 'USD to JPY' }
+    // العملات الأساسية التي سنجلب أسعارها من USD
+    TARGET_CURRENCIES: [
+        "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", 
+        "AED", "SAR", "QAR", "EGP", "TRY", "INR", "RUB", 
+        "BRL", "ZAR", "MXN"
     ],
     
-    // Quick pairs for dashboard
-    QUICK_PAIRS: [
-        'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF',
-        'USD/CAD', 'AUD/USD', 'USD/AED', 'USD/SAR'
-    ],
+    // إصدار التطبيق
+    APP_VERSION: "2.9.0",
     
-    // Update intervals (in milliseconds)
-    UPDATE_INTERVAL: 60 * 60 * 1000, // 1 hour
-    COUNTDOWN_INTERVAL: 60 * 1000, // 1 minute
-    
-    // Storage keys
-    STORAGE_KEYS: {
-        FOREX_DATA: 'fx_market_data',
-        WATCHLIST: 'fx_watchlist',
-        LAST_UPDATE: 'last_data_update',
-        API_REQUESTS: 'api_request_count'
+    // إعدادات التطبيق الافتراضية
+    DEFAULT_SETTINGS: {
+        theme: "light",
+        language: "en",
+        baseCurrency: "USD",
+        trackedCurrencies: ["USD", "EUR", "GBP", "JPY", "AED", "SAR", "QAR"]
     }
 };
+
+// حالة التطبيق
+let appState = {
+    theme: localStorage.getItem('theme') || CONFIG.DEFAULT_SETTINGS.theme,
+    language: localStorage.getItem('language') || CONFIG.DEFAULT_SETTINGS.language,
+    trackedCurrencies: JSON.parse(localStorage.getItem('trackedCurrencies')) || CONFIG.DEFAULT_SETTINGS.trackedCurrencies,
+    fromCurrency: localStorage.getItem('fromCurrency') || "USD",
+    toCurrency: localStorage.getItem('toCurrency') || "EUR",
+    amount: parseFloat(localStorage.getItem('amount')) || 100,
+    exchangeRates: JSON.parse(localStorage.getItem('exchangeRates')) || null,
+    lastUpdate: localStorage.getItem('lastUpdate') || null,
+    nextUpdate: localStorage.getItem('nextUpdate') || null,
+    apiCallsToday: parseInt(localStorage.getItem('apiCallsToday')) || 0,
+    lastApiCallDate: localStorage.getItem('lastApiCallDate') || null,
+    changingCurrency: null,
+    isRefreshing: false
+};
+
+// تتبع عدد طلبات API اليومية
+function updateApiCallCounter() {
+    const today = new Date().toDateString();
+    
+    if (appState.lastApiCallDate !== today) {
+        appState.apiCallsToday = 0;
+        appState.lastApiCallDate = today;
+    }
+    
+    appState.apiCallsToday++;
+    localStorage.setItem('apiCallsToday', appState.apiCallsToday.toString());
+    localStorage.setItem('lastApiCallDate', today);
+    
+    console.log(`API calls today: ${appState.apiCallsToday}/24`);
+}
