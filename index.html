@@ -3,345 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FX Markets | Real-Time Currency Rates</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>CurrencyPro - Currency Converter</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <!-- Top Status Bar -->
-    <div class="status-bar">
-        <div class="status-left">
-            <div class="market-status">
-                <span class="status-dot live"></span>
-                <span class="status-text">LIVE MARKET</span>
-            </div>
-            <div class="update-info">
-                <i class="fas fa-sync-alt"></i>
-                <span>Auto-Update: </span>
-                <span id="nextUpdate">60:00</span>
-            </div>
+    <!-- Top Navigation -->
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-globe-americas"></i>
+            CurrencyPro
         </div>
+        <select class="language-selector" id="languageSelector">
+            <option value="en">English</option>
+            <option value="ar">العربية</option>
+        </select>
+    </div>
+
+    <!-- Rates Page -->
+    <div class="page active" id="ratesPage">
+        <h1 class="page-title">Exchange Rates</h1>
         
-        <div class="status-center">
-            <div class="server-time">
-                <i class="fas fa-clock"></i>
-                <span id="serverTime">--:--:--</span>
-                <span class="timezone">UTC</span>
+        <div class="rates-section">
+            <div class="section-title">
+                <span>Currency Rates</span>
             </div>
-        </div>
-        
-        <div class="status-right">
-            <div class="api-counter">
-                <i class="fas fa-database"></i>
-                <span>API: </span>
-                <span id="apiCount">0</span>
-                <span>/800</span>
+            
+            <div class="rates-list" id="ratesList">
+                <!-- Dynamic content -->
             </div>
-            <div class="last-update">
-                <i class="fas fa-history"></i>
-                <span>Updated: </span>
-                <span id="lastUpdateTime">--:--</span>
+            
+            <div class="add-currency-section">
+                <button class="add-currency-btn" id="addCurrencyBtn">
+                    <i class="fas fa-plus"></i>
+                    Add Currency
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Main Header -->
-    <header class="main-header">
-        <div class="header-left">
-            <div class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="logo-text">
-                    <span class="logo-primary">FX</span>
-                    <span class="logo-secondary">MARKETS</span>
-                </div>
-            </div>
-            
-            <nav class="main-nav">
-                <a href="#forex" class="nav-item active" data-tab="forex">
-                    <i class="fas fa-coins"></i>
-                    <span>FOREX</span>
-                </a>
-                <a href="#converter" class="nav-item" data-tab="converter">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>CONVERTER</span>
-                </a>
-                <a href="#watchlist" class="nav-item" data-tab="watchlist">
-                    <i class="fas fa-star"></i>
-                    <span>WATCHLIST</span>
-                </a>
-            </nav>
-        </div>
+    <!-- Converter Page -->
+    <div class="page" id="convertPage">
+        <h1 class="page-title">Currency Converter</h1>
         
-        <div class="header-right">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="globalSearch" placeholder="Search currency...">
+        <div class="converter">
+            <div class="converter-section">
+                <!-- From Currency -->
+                <div class="currency-row">
+                    <div class="currency-display">
+                        <div class="currency-flag" id="fromCurrencyImage">
+                            <!-- Dynamic content -->
+                        </div>
+                        <div class="currency-symbol" id="fromCurrencyCode">USD</div>
+                    </div>
+                    <button class="swap-icon-btn" id="changeFromCurrencyBtn">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                </div>
+                
+                <input type="text" class="amount-input" id="fromAmount" value="100" inputmode="decimal">
+                
+                <!-- Middle swap button -->
+                <div class="swap-container">
+                    <button class="swap-btn-large" id="swapCurrencies">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                </div>
+                
+                <!-- To Currency -->
+                <div class="currency-row">
+                    <div class="currency-display">
+                        <div class="currency-flag" id="toCurrencyImage">
+                            <!-- Dynamic content -->
+                        </div>
+                        <div class="currency-symbol" id="toCurrencyCode">EUR</div>
+                    </div>
+                    <button class="swap-icon-btn" id="changeToCurrencyBtn">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                </div>
+                
+                <input type="text" class="amount-input" id="toAmount" value="85.04" readonly>
+                
+                <!-- Mid-market rate -->
+                <div class="mid-market-rate">
+                    <p id="midMarketRate">USD = 0.8504 EUR at the mid-market rate</p>
+                </div>
             </div>
-            <button class="refresh-btn" id="refreshData">
-                <i class="fas fa-redo"></i>
-                <span>Refresh</span>
-            </button>
-        </div>
-    </header>
-
-    <!-- Quick Stats Bar -->
-    <div class="stats-bar">
-        <div class="stat-item">
-            <span class="stat-label">TOTAL PAIRS</span>
-            <span class="stat-value" id="totalPairs">20</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-label">TOP GAINER</span>
-            <span class="stat-value gain" id="topGainer">EUR/USD +0.42%</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-label">TOP LOSER</span>
-            <span class="stat-value loss" id="topLoser">USD/JPY -0.28%</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-label">VOLATILITY</span>
-            <span class="stat-value" id="volatility">MEDIUM</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-label">SPREAD AVG</span>
-            <span class="stat-value" id="avgSpread">1.2 pips</span>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Forex Market Section -->
-        <section id="forex-section" class="content-section active">
-            <div class="section-header">
-                <h2><i class="fas fa-globe-americas"></i> FOREX MARKET</h2>
-                <div class="section-controls">
-                    <div class="view-toggle">
-                        <button class="view-btn active" data-view="all">
-                            <i class="fas fa-th"></i>
-                            ALL
-                        </button>
-                        <button class="view-btn" data-view="majors">
-                            <i class="fas fa-star"></i>
-                            MAJORS
-                        </button>
-                        <button class="view-btn" data-view="minors">
-                            <i class="fas fa-circle"></i>
-                            MINORS
-                        </button>
-                        <button class="view-btn" data-view="exotics">
-                            <i class="fas fa-globe-asia"></i>
-                            EXOTICS
-                        </button>
+    <!-- Settings Page -->
+    <div class="page" id="settingsPage">
+        <h1 class="page-title">Settings</h1>
+        
+        <div class="settings-section">
+            <div class="settings-group">
+                <div class="group-title">Appearance</div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Dark Mode</h3>
+                        <p>Change app appearance</p>
                     </div>
-                    <div class="sort-controls">
-                        <select id="sortBy" class="sort-select">
-                            <option value="symbol">SYMBOL</option>
-                            <option value="price">PRICE</option>
-                            <option value="change">CHANGE</option>
-                            <option value="volume">VOLUME</option>
-                        </select>
-                        <select id="sortOrder" class="sort-select">
-                            <option value="asc">ASC</option>
-                            <option value="desc">DESC</option>
-                        </select>
+                    <div class="theme-selector">
+                        <button class="theme-option active" data-theme="light">Light</button>
+                        <button class="theme-option" data-theme="dark">Dark</button>
+                        <button class="theme-option" data-theme="auto">Auto</button>
                     </div>
-                </div>
-            </div>
-
-            <!-- Market Table -->
-            <div class="market-table-container">
-                <div class="table-wrapper">
-                    <table class="market-table">
-                        <thead>
-                            <tr>
-                                <th class="col-symbol">
-                                    <i class="fas fa-hashtag"></i>
-                                    SYMBOL
-                                </th>
-                                <th class="col-bid">
-                                    <i class="fas fa-arrow-down"></i>
-                                    BID
-                                </th>
-                                <th class="col-ask">
-                                    <i class="fas fa-arrow-up"></i>
-                                    ASK
-                                </th>
-                                <th class="col-change">
-                                    <i class="fas fa-chart-line"></i>
-                                    CHANGE
-                                </th>
-                                <th class="col-high">
-                                    <i class="fas fa-caret-up"></i>
-                                    HIGH
-                                </th>
-                                <th class="col-low">
-                                    <i class="fas fa-caret-down"></i>
-                                    LOW
-                                </th>
-                                <th class="col-time">
-                                    <i class="fas fa-clock"></i>
-                                    TIME
-                                </th>
-                                <th class="col-actions">
-                                    <i class="fas fa-cog"></i>
-                                    ACTIONS
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="marketTableBody">
-                            <!-- Data will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Quick Pairs -->
-            <div class="quick-pairs">
-                <h3><i class="fas fa-bolt"></i> QUICK VIEW</h3>
-                <div class="pairs-grid" id="quickPairsGrid">
-                    <!-- Quick pairs will be loaded here -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Converter Section -->
-        <section id="converter-section" class="content-section">
-            <div class="section-header">
-                <h2><i class="fas fa-calculator"></i> CURRENCY CONVERTER</h2>
-                <div class="section-controls">
-                    <div class="converter-info">
-                        <span id="converterStatus">Real-time rates</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="converter-container">
-                <div class="converter-card">
-                    <div class="converter-inputs">
-                        <div class="input-group">
-                            <div class="input-label">AMOUNT</div>
-                            <div class="amount-input">
-                                <input type="number" id="amount" value="1000" min="0" step="0.01">
-                                <div class="currency-select">
-                                    <select id="fromCurrency">
-                                        <!-- Currencies will be loaded -->
-                                    </select>
-                                    <div class="currency-flag" id="fromFlag">🇺🇸</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="swap-container">
-                            <button id="swapCurrencies" class="swap-btn">
-                                <i class="fas fa-exchange-alt"></i>
-                            </button>
-                        </div>
-
-                        <div class="input-group">
-                            <div class="input-label">CONVERT TO</div>
-                            <div class="amount-input">
-                                <div class="converted-amount" id="convertedAmount">0.00</div>
-                                <div class="currency-select">
-                                    <select id="toCurrency">
-                                        <!-- Currencies will be loaded -->
-                                    </select>
-                                    <div class="currency-flag" id="toFlag">🇪🇺</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="converter-details">
-                        <div class="rate-info">
-                            <div class="rate-item">
-                                <span class="rate-label">EXCHANGE RATE</span>
-                                <span class="rate-value" id="exchangeRate">1 USD = 0.00 EUR</span>
-                            </div>
-                            <div class="rate-item">
-                                <span class="rate-label">INVERSE RATE</span>
-                                <span class="rate-value" id="inverseRate">1 EUR = 0.00 USD</span>
-                            </div>
-                            <div class="rate-item">
-                                <span class="rate-label">SPREAD</span>
-                                <span class="rate-value" id="rateSpread">0.0000</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Popular Conversions -->
-                    <div class="popular-conversions">
-                        <h3><i class="fas fa-fire"></i> POPULAR CONVERSIONS</h3>
-                        <div class="conversion-grid" id="popularConversions">
-                            <!-- Popular conversions will be loaded here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Watchlist Section -->
-        <section id="watchlist-section" class="content-section">
-            <div class="section-header">
-                <h2><i class="fas fa-star"></i> MY WATCHLIST</h2>
-                <div class="section-controls">
-                    <button class="btn-primary" id="addToWatchlist">
-                        <i class="fas fa-plus"></i>
-                        ADD PAIR
-                    </button>
                 </div>
             </div>
             
-            <div class="watchlist-container">
-                <div class="empty-watchlist" id="emptyWatchlist">
-                    <i class="fas fa-star"></i>
-                    <h3>Your watchlist is empty</h3>
-                    <p>Add currency pairs to monitor their performance</p>
-                    <button class="btn-secondary" id="browsePairs">
-                        <i class="fas fa-search"></i>
-                        BROWSE PAIRS
-                    </button>
-                </div>
-                <div class="watchlist-table" id="watchlistTable" style="display: none;">
-                    <!-- Watchlist will be loaded here -->
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="main-footer">
-        <div class="footer-content">
-            <div class="footer-left">
-                <div class="data-provider">
-                    <span>Data Provider:</span>
-                    <img src="https://twelvedata.com/static/img/twelvedata-logo.svg" alt="Twelve Data" class="provider-logo">
-                    <span>Twelve Data API</span>
+            <div class="settings-group">
+                <div class="group-title">General</div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Version</h3>
+                        <p>App version number</p>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-secondary); font-size: 13px;">2.9.0</span>
+                    </div>
                 </div>
             </div>
             
-            <div class="footer-center">
-                <div class="footer-info">
-                    <span><i class="fas fa-shield-alt"></i> SSL Secured</span>
-                    <span><i class="fas fa-bolt"></i> Real-time Data</span>
-                    <span><i class="fas fa-sync"></i> Auto-refresh 60min</span>
-                </div>
-            </div>
-            
-            <div class="footer-right">
-                <div class="copyright">
-                    © 2024 FX Markets v2.0 | Professional Trading Interface
-                </div>
+            <div class="version-info">
+                <span>© 2023 CurrencyPro</span>
+                <span>All rights reserved</span>
             </div>
         </div>
-    </footer>
+    </div>
 
-    <!-- JavaScript Files -->
-    <script src="config.js"></script>
-    <script src="api.js"></script>
-    <script src="app.js"></script>
+    <!-- Add Currency Modal -->
+    <div class="currency-select-modal" id="addCurrencyModal">
+        <div class="modal-content">
+            <div class="modal-header">Add Currency</div>
+            <div class="modal-body" id="availableCurrenciesList">
+                <!-- Dynamic content -->
+            </div>
+            <button class="close-modal-btn" id="closeModalBtn">Close</button>
+        </div>
+    </div>
+
+    <!-- Change Currency Modal -->
+    <div class="currency-select-modal" id="changeCurrencyModal">
+        <div class="modal-content">
+            <div class="modal-header" id="changeCurrencyTitle">Select Currency</div>
+            <div class="modal-body" id="changeCurrencyList">
+                <!-- Dynamic content -->
+            </div>
+            <button class="close-modal-btn" id="closeChangeModalBtn">Close</button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="#" class="nav-item" data-page="settingsPage">
+            <i class="fas fa-cog"></i>
+            <span>Settings</span>
+        </a>
+        <a href="#" class="nav-item" data-page="convertPage">
+            <i class="fas fa-exchange-alt"></i>
+            <span>Convert</span>
+        </a>
+        <a href="#" class="nav-item active" data-page="ratesPage">
+            <i class="fas fa-chart-line"></i>
+            <span>Rates</span>
+        </a>
+    </div>
+
+    <!-- JavaScript files -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
