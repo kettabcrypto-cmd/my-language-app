@@ -1,511 +1,567 @@
-// Currency Dashboard App - Modern Version
-class DashboardApp {
+// التطبيق الرئيسي
+
+class CurrencyStockApp {
     constructor() {
-        this.api = window.ApiService || null;
-        this.cacheDuration = 5 * 60 * 1000; // 5 minutes
-        this.lastUpdate = null;
-        this.initialize();
-    }
-
-    async initialize() {
-        console.log('📊 Dashboard App Initializing...');
+        this.apiService = apiService;
+        this.currentTab = 'forex';
+        this.forexData = {};
+        this.stocksData = {};
+        this.conversionRates = {};
         
-        // Wait for DOM to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.start());
-        } else {
-            this.start();
-        }
+        this.init();
     }
-
-    async start() {
-        try {
-            // Initialize UI components
-            this.setupEventListeners();
-            
-            // Load initial data
-            await this.loadDashboardData();
-            
-            // Start auto-refresh
-            this.startAutoRefresh();
-            
-            console.log('✅ Dashboard App Started Successfully');
-        } catch (error) {
-            console.error('❌ Failed to start dashboard:', error);
-            this.showNotification('Failed to load dashboard data', 'error');
-        }
+    
+    async init() {
+        // تهيئة التبويبات
+        this.setupTabs();
+        
+        // تهيئة محول العملات
+        this.setupCurrencyConverter();
+        
+        // تحميل البيانات الأولية
+        await this.loadInitialData();
+        
+        // إعداد التحديث التلقائي
+        this.setupAutoRefresh();
+        
+        // تحديث عرض طلبات API
+        this.updateAPIRequestDisplay();
+        
+        // تحديث وقت آخر تحديث
+        this.updateLastUpdateTime();
     }
-
-    setupEventListeners() {
-        // Refresh button
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.refreshData());
-        }
-
-        // Currency converter
-        const convertBtn = document.getElementById('convertBtn');
-        if (convertBtn) {
-            convertBtn.addEventListener('click', () => this.convertCurrency());
-        }
-
-        // Swap currencies
-        const swapBtn = document.getElementById('swapBtn');
-        if (swapBtn) {
-            swapBtn.addEventListener('click', () => this.swapCurrencies());
-        }
-
-        // Gold calculator
-        const goldGrams = document.getElementById('goldGrams');
-        const goldKarat = document.getElementById('goldKarat');
-        if (goldGrams && goldKarat) {
-            goldGrams.addEventListener('input', () => this.calculateGoldValue());
-            goldKarat.addEventListener('change', () => this.calculateGoldValue());
-        }
-
-        // Amount input - auto convert on change
-        const amountInput = document.getElementById('amount');
-        if (amountInput) {
-            amountInput.addEventListener('input', (e) => {
-                if (e.target.value && e.target.value > 0) {
-                    this.debouncedConvert();
+    
+    // إعداد التبويبات
+    setupTabs() {
+        const tabs = document.querySelectorAll('.tab');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                
+                // تحديث التبويب النشط
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // إظهار المحتوى المناسب
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabId).classList.add('active');
+                
+                this.currentTab = tabId;
+                
+                // تحميل بيانات التبويب إذا لزم
+                if (tabId === 'stocks' && Object.keys(this.stocksData).length === 0) {
+                    this.loadStocksData();
                 }
             });
-        }
-
-        // Currency select changes
-        const fromCurrency = document.getElementById('fromCurrency');
-        const toCurrency = document.getElementById('toCurrency');
-        if (fromCurrency && toCurrency) {
-            fromCurrency.addEventListener('change', () => this.convertCurrency());
-            toCurrency.addEventListener('change', () => this.convertCurrency());
-        }
+        });
+        
+        // أزرار التحديث
+        document.getElementById('refreshForex').addEventListener('click', () => {
+            this.loadForexData(true);
+        });
+        
+        document.getElementById('refreshStocks').addEventListener('click', () => {
+            this.loadStocksData(true);
+        });
     }
-
-    async loadDashboardData() {
-        console.log('🔄 Loading dashboard data...');
+    
+    // تحميل البيانات الأولية
+    async loadInitialData() {
+        // تحميل بيانات العملات
+        await this.loadForexData();
+        
+        // تحميل بيانات الأسهم (بتأخير لتقليل الحمل)
+        setTimeout(() => {
+            this.loadStocksData();
+        }, 2000);
+    }
+    
+    // تحميل بيانات العملات
+    async loadForexData(forceRefresh = false) {
+        const forexGrid = document.getElementById('forexGrid');
+        
+        // عرض حالة التحميل
+        forexGrid.innerHTML = `
+            <div class="loading" style="grid-column: 1/-1; text-align: center; padding: 40px;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>جار تحميل أسعار العملات...</p>
+            </div>
+        `;
         
         try {
-            // Load gold and silver prices
-            await this.loadMetalsPrices();
+            // جلب رموز العملات
+            const symbols = CONFIG.FOREX_PAIRS.map(pair => pair.symbol);
             
-            // Load currency rates
-            await this.loadCurrencyRates();
+            // جلب البيانات
+            const data = await this.apiService.getBatchForexRates(symbols);
+            this.forexData = data;
             
-            // Update UI
-            this.updateLastUpdateTime();
-            this.updateRequestCount();
+            // تحديث العرض
+            this.updateForexDisplay();
             
-            this.showNotification('Dashboard data loaded successfully', 'success');
+            // حفظ وقت التحديث
+            this.saveLastUpdate();
+            
+            // تحديث خيارات محول العملات
+            this.updateCurrencyConverterOptions();
+            
         } catch (error) {
-            console.error('Error loading dashboard data:', error);
-            this.showNotification('Using cached/sample data', 'warning');
-            this.loadSampleData();
+            console.error('خطأ في تحميل بيانات العملات:', error);
+            forexGrid.innerHTML = `
+                <div class="error" style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ef4444;">
+                    <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    <p>فشل تحميل بيانات العملات. تحقق من اتصال الإنترنت.</p>
+                </div>
+            `;
         }
     }
-
-    async loadMetalsPrices() {
-        if (!this.api) {
-            console.warn('API service not available, using sample data');
-            this.loadSampleMetalsData();
+    
+    // تحديث عرض العملات
+    updateForexDisplay() {
+        const forexGrid = document.getElementById('forexGrid');
+        
+        if (!forexGrid || Object.keys(this.forexData).length === 0) return;
+        
+        let html = '';
+        
+        CONFIG.FOREX_PAIRS.forEach(pair => {
+            const data = this.forexData[pair.symbol];
+            
+            if (data && data.rate) {
+                // حساب التغيير (بسيط - في تطبيق حقيقي سيأتي من API)
+                const price = parseFloat(data.rate);
+                const change = (Math.random() - 0.5) * 0.01; // بيانات وهمية للتغيير
+                const changePercent = (change / price) * 100;
+                
+                const currency = {
+                    symbol: pair.symbol,
+                    name: pair.name,
+                    price: price,
+                    change: change,
+                    change_percent: changePercent
+                };
+                
+                html += Utils.createCurrencyCard(currency);
+            } else {
+                // عرض بيانات افتراضية في حالة عدم وجود بيانات
+                html += `
+                    <div class="currency-card">
+                        <div class="currency-info">
+                            <h3>${pair.symbol.replace('/USD', '')}</h3>
+                            <p>${pair.name}</p>
+                        </div>
+                        <div class="currency-price">
+                            <div class="price">--</div>
+                            <div class="change">لا توجد بيانات</div>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        forexGrid.innerHTML = html;
+    }
+    
+    // تحميل بيانات الأسهم
+    async loadStocksData(forceRefresh = false) {
+        const stocksTableBody = document.getElementById('stocksTableBody');
+        
+        // عرض حالة التحميل
+        stocksTableBody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 40px;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p>جار تحميل بيانات الأسهم...</p>
+                </td>
+            </tr>
+        `;
+        
+        try {
+            // جلب بيانات الأسهم
+            const data = await this.apiService.getBatchStockQuotes(CONFIG.STOCKS);
+            this.stocksData = data;
+            
+            // تحديث العرض
+            this.updateStocksDisplay();
+            
+            // إعداد البحث والتصفية
+            this.setupStockFilters();
+            
+            // حفظ وقت التحديث
+            this.saveLastUpdate();
+            
+        } catch (error) {
+            console.error('خطأ في تحميل بيانات الأسهم:', error);
+            stocksTableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px; color: #ef4444;">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        <p>فشل تحميل بيانات الأسهم. تحقق من اتصال الإنترنت.</p>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+    
+    // تحديث عرض الأسهم
+    updateStocksDisplay(filteredStocks = null) {
+        const stocksTableBody = document.getElementById('stocksTableBody');
+        
+        if (!stocksTableBody) return;
+        
+        const stocksToDisplay = filteredStocks || Object.values(this.stocksData);
+        
+        if (stocksToDisplay.length === 0) {
+            stocksTableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 20px;">
+                        لا توجد نتائج مطابقة للبحث
+                    </td>
+                </tr>
+            `;
             return;
         }
-
-        try {
-            const prices = await this.api.getGoldAndSilverPrices();
-            
-            if (prices) {
-                // Update gold prices
-                this.updateElementText('goldPrice', `$${prices.gold24k.toFixed(2)}`);
-                this.updateElementText('goldPriceLive', `$${prices.gold24k.toFixed(2)}`);
-                
-                // Update silver price
-                this.updateElementText('silverPrice', `$${prices.silver.toFixed(2)}`);
-                this.updateElementText('silverPriceLive', `$${prices.silver.toFixed(2)}`);
-                
-                // Update karats prices
-                this.updateGoldKarats(prices);
-                
-                // Recalculate gold value if needed
-                this.calculateGoldValue();
-            }
-        } catch (error) {
-            console.error('Error loading metals prices:', error);
-            throw error;
-        }
-    }
-
-    async loadCurrencyRates() {
-        if (!this.api) {
-            console.warn('API service not available, using sample data');
-            this.loadSampleRatesData();
-            return;
-        }
-
-        try {
-            const rates = await this.api.getAllRatesVsUSD();
-            
-            if (rates) {
-                // Update quick stats
-                if (rates.SAR) {
-                    this.updateElementText('usdSarRate', rates.SAR.toFixed(4));
-                }
-                if (rates.EUR) {
-                    this.updateElementText('usdEurRate', rates.EUR.toFixed(4));
-                }
-                if (rates.GBP) {
-                    // Find GBP rate in rates table and update
-                    this.updateRatesTable(rates);
-                }
-                
-                // Update converter if there's an amount
-                const amount = document.getElementById('amount').value;
-                if (amount && amount > 0) {
-                    this.convertCurrency();
-                }
-            }
-        } catch (error) {
-            console.error('Error loading currency rates:', error);
-            throw error;
-        }
-    }
-
-    updateRatesTable(rates) {
-        // This would update the rates table with live data
-        // For now, we'll just update the major pairs
-        const pairs = {
-            'USD/SAR': rates.SAR,
-            'USD/EUR': rates.EUR,
-            'USD/GBP': rates.GBP,
-            'USD/AED': rates.AED,
-            'USD/EGP': rates.EGP
-        };
         
-        // In a real implementation, you would update each row in the table
-        console.log('Rates table updated:', pairs);
-    }
-
-    updateGoldKarats(prices) {
-        const karatPrices = {
-            '22K': prices.gold22k,
-            '21K': prices.gold21k,
-            '18K': prices.gold18k,
-            '14K': prices.gold24k * 0.583 // 14K is 58.3% gold
-        };
-        
-        // Update karats grid if it exists
-        const karatItems = document.querySelectorAll('.karat-price');
-        if (karatItems.length > 0) {
-            const karats = ['22K', '21K', '18K', '14K'];
-            karatItems.forEach((item, index) => {
-                if (karatPrices[karats[index]]) {
-                    item.textContent = `$${karatPrices[karats[index]].toFixed(2)}`;
-                }
+        // ترتيب الأسهم حسب السعر (تنازلي)
+        const sortedStocks = stocksToDisplay
+            .filter(stock => stock && stock.symbol)
+            .sort((a, b) => {
+                const priceA = parseFloat(a.price) || 0;
+                const priceB = parseFloat(b.price) || 0;
+                return priceB - priceA;
             });
-        }
+        
+        let html = '';
+        
+        sortedStocks.forEach((stock, index) => {
+            if (stock && stock.symbol) {
+                // حساب التغيير
+                const price = parseFloat(stock.price) || 0;
+                const open = parseFloat(stock.open) || price;
+                const change = price - open;
+                const changePercent = open !== 0 ? (change / open) * 100 : 0;
+                
+                const stockWithChange = {
+                    ...stock,
+                    change: change,
+                    percent_change: changePercent
+                };
+                
+                html += Utils.createStockRow(stockWithChange, index);
+            }
+        });
+        
+        stocksTableBody.innerHTML = html;
     }
-
-    async convertCurrency() {
-        const amountInput = document.getElementById('amount');
+    
+    // إعداد البحث والتصفية للأسهم
+    setupStockFilters() {
+        const searchInput = document.getElementById('stockSearch');
+        const filterSelect = document.getElementById('stockFilter');
+        
+        if (!searchInput || !filterSelect) return;
+        
+        const applyFilters = () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filterType = filterSelect.value;
+            
+            let filtered = Object.values(this.stocksData).filter(stock => {
+                if (!stock || !stock.symbol) return false;
+                
+                // البحث
+                const matchesSearch = stock.symbol.toLowerCase().includes(searchTerm) || 
+                                     (stock.name && stock.name.toLowerCase().includes(searchTerm));
+                
+                if (!matchesSearch) return false;
+                
+                // التصفية حسب النوع
+                if (filterType === 'all') return true;
+                
+                const price = parseFloat(stock.price) || 0;
+                const open = parseFloat(stock.open) || price;
+                const change = price - open;
+                
+                if (filterType === 'gainers') return change > 0;
+                if (filterType === 'losers') return change < 0;
+                
+                return true;
+            });
+            
+            this.updateStocksDisplay(filtered);
+        };
+        
+        searchInput.addEventListener('input', applyFilters);
+        filterSelect.addEventListener('change', applyFilters);
+    }
+    
+    // إعداد محول العملات
+    setupCurrencyConverter() {
         const fromSelect = document.getElementById('fromCurrency');
         const toSelect = document.getElementById('toCurrency');
+        const amountInput = document.getElementById('amount');
+        const swapBtn = document.getElementById('swapCurrencies');
         const convertBtn = document.getElementById('convertBtn');
-        const resultElement = document.getElementById('toAmount');
-        const rateElement = document.getElementById('exchangeRate');
+        const quickConversions = document.getElementById('quickConversions');
         
-        if (!amountInput || !fromSelect || !toSelect) return;
+        // تعبئة خيارات العملات
+        this.updateCurrencyConverterOptions();
         
-        const amount = parseFloat(amountInput.value);
-        const from = fromSelect.value;
-        const to = toSelect.value;
+        // تعيين القيم الافتراضية
+        fromSelect.value = 'USD';
+        toSelect.value = 'EUR';
         
-        if (!amount || amount <= 0) {
-            this.showNotification('Please enter a valid amount', 'error');
-            return;
-        }
-        
-        // Show loading state
-        if (convertBtn) {
-            convertBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Converting...';
-            convertBtn.disabled = true;
-        }
-        
-        try {
-            let result;
+        // حدث تبديل العملات
+        swapBtn.addEventListener('click', () => {
+            const fromValue = fromSelect.value;
+            const toValue = toSelect.value;
             
-            if (this.api) {
-                result = await this.api.convertCurrency(amount, from, to);
-            }
+            fromSelect.value = toValue;
+            toSelect.value = fromValue;
             
-            if (result && result.convertedAmount) {
-                // Update result
-                resultElement.textContent = result.convertedAmount.toFixed(2);
-                rateElement.textContent = `1 ${from} = ${result.rate.toFixed(4)} ${to}`;
-                
-                // Update rate update time
-                this.updateElementText('rateUpdateTime', new Date().toLocaleTimeString('en-US', {
-                    hour12: true,
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }));
-                
-                this.showNotification('Conversion successful', 'success');
-            } else {
-                // Fallback to sample calculation
-                this.useSampleConversion(amount, from, to, resultElement, rateElement);
-                this.showNotification('Using sample conversion rates', 'warning');
-            }
-        } catch (error) {
-            console.error('Conversion error:', error);
-            this.useSampleConversion(amount, from, to, resultElement, rateElement);
-            this.showNotification('Conversion failed, using sample data', 'error');
-        } finally {
-            // Reset button state
-            if (convertBtn) {
-                convertBtn.innerHTML = '<i class="fas fa-calculator"></i> Convert Now';
-                convertBtn.disabled = false;
-            }
-        }
-    }
-
-    useSampleConversion(amount, from, to, resultElement, rateElement) {
-        // Sample conversion rates (for demo purposes)
-        const sampleRates = {
-            'USD': { 'SAR': 3.75, 'EUR': 0.92, 'GBP': 0.79, 'AED': 3.67, 'EGP': 30.89 },
-            'EUR': { 'USD': 1.09, 'SAR': 4.08, 'GBP': 0.86, 'AED': 4.00, 'EGP': 33.68 },
-            'GBP': { 'USD': 1.27, 'EUR': 1.16, 'SAR': 4.76, 'AED': 4.66, 'EGP': 39.25 },
-            'SAR': { 'USD': 0.27, 'EUR': 0.25, 'GBP': 0.21, 'AED': 0.98, 'EGP': 8.24 }
-        };
+            this.performConversion();
+        });
         
-        const rate = sampleRates[from]?.[to] || 1;
-        const convertedAmount = amount * rate;
+        // حدث التحويل
+        convertBtn.addEventListener('click', () => {
+            this.performConversion();
+        });
         
-        resultElement.textContent = convertedAmount.toFixed(2);
-        rateElement.textContent = `1 ${from} = ${rate.toFixed(4)} ${to}`;
+        // التحويل عند تغيير القيم
+        [fromSelect, toSelect, amountInput].forEach(element => {
+            element.addEventListener('change', () => {
+                this.performConversion();
+            });
+            
+            element.addEventListener('input', () => {
+                if (element === amountInput) {
+                    this.performConversion();
+                }
+            });
+        });
+        
+        // التحويلات السريعة
+        this.setupQuickConversions();
+        
+        // التحويل الأولي
+        setTimeout(() => {
+            this.performConversion();
+        }, 1000);
     }
-
-    swapCurrencies() {
+    
+    // تحديث خيارات محول العملات
+    updateCurrencyConverterOptions() {
         const fromSelect = document.getElementById('fromCurrency');
         const toSelect = document.getElementById('toCurrency');
         
         if (!fromSelect || !toSelect) return;
         
-        const temp = fromSelect.value;
-        fromSelect.value = toSelect.value;
-        toSelect.value = temp;
+        // مسح الخيارات الحالية
+        fromSelect.innerHTML = '';
+        toSelect.innerHTML = '';
         
-        // Convert immediately if there's an amount
-        const amount = document.getElementById('amount').value;
-        if (amount && amount > 0) {
-            this.convertCurrency();
-        }
+        // إضافة خيارات العملات
+        CONFIG.POPULAR_CURRENCIES.forEach(currency => {
+            const option1 = document.createElement('option');
+            option1.value = currency.code;
+            option1.textContent = `${currency.flag} ${currency.code} - ${currency.name}`;
+            
+            const option2 = option1.cloneNode(true);
+            
+            fromSelect.appendChild(option1);
+            toSelect.appendChild(option2);
+        });
     }
-
-    calculateGoldValue() {
-        const gramsInput = document.getElementById('goldGrams');
-        const karatSelect = document.getElementById('goldKarat');
-        const valueElement = document.getElementById('goldValue');
+    
+    // إعداد التحويلات السريعة
+    setupQuickConversions() {
+        const quickConversions = document.getElementById('quickConversions');
         
-        if (!gramsInput || !karatSelect || !valueElement) return;
+        if (!quickConversions) return;
         
-        const grams = parseFloat(gramsInput.value) || 0;
-        const karat = parseInt(karatSelect.value);
+        const conversions = [
+            { from: 'USD', to: 'EUR', amount: 100, label: '100 دولار إلى يورو' },
+            { from: 'USD', to: 'GBP', amount: 100, label: '100 دولار إلى جنيه' },
+            { from: 'EUR', to: 'USD', amount: 100, label: '100 يورو إلى دولار' },
+            { from: 'GBP', to: 'USD', amount: 100, label: '100 جنيه إلى دولار' },
+            { from: 'USD', to: 'AED', amount: 100, label: '100 دولار إلى درهم' },
+            { from: 'USD', to: 'SAR', amount: 100, label: '100 دولار إلى ريال' }
+        ];
         
-        // Get current gold price
-        const goldPriceElement = document.getElementById('goldPriceLive');
-        let goldPrice = 2150.45; // Default fallback
+        let html = '';
         
-        if (goldPriceElement) {
-            const priceText = goldPriceElement.textContent.replace('$', '').replace(',', '');
-            goldPrice = parseFloat(priceText) || 2150.45;
-        }
+        conversions.forEach(conv => {
+            html += `
+                <div class="quick-conversion" data-from="${conv.from}" data-to="${conv.to}" data-amount="${conv.amount}">
+                    <h4>${conv.label}</h4>
+                    <p class="quick-result" id="quick_${conv.from}_${conv.to}">--</p>
+                </div>
+            `;
+        });
         
-        // Karat multipliers (purity)
-        const karatMultipliers = {
-            24: 1.000, // 99.9%
-            22: 0.9167, // 91.67%
-            21: 0.875,  // 87.5%
-            18: 0.750   // 75.0%
-        };
+        quickConversions.innerHTML = html;
         
-        const multiplier = karatMultipliers[karat] || 1.0;
+        // إضافة أحداث النقر
+        quickConversions.querySelectorAll('.quick-conversion').forEach(el => {
+            el.addEventListener('click', () => {
+                const from = el.getAttribute('data-from');
+                const to = el.getAttribute('data-to');
+                const amount = el.getAttribute('data-amount');
+                
+                document.getElementById('fromCurrency').value = from;
+                document.getElementById('toCurrency').value = to;
+                document.getElementById('amount').value = amount;
+                
+                this.performConversion();
+            });
+        });
         
-        // Calculate: price per gram = (price per ounce * multiplier) / 31.1035
-        // 1 troy ounce = 31.1035 grams
-        const pricePerGram = (goldPrice * multiplier) / 31.1035;
-        const totalValue = pricePerGram * grams;
-        
-        valueElement.textContent = `$${totalValue.toFixed(2)}`;
+        // تحديث التحويلات السريعة
+        this.updateQuickConversions();
     }
-
-    async refreshData() {
-        console.log('🔄 Manual refresh requested');
+    
+    // تحديث التحويلات السريعة
+    async updateQuickConversions() {
+        const conversions = [
+            { from: 'USD', to: 'EUR' },
+            { from: 'USD', to: 'GBP' },
+            { from: 'EUR', to: 'USD' },
+            { from: 'GBP', to: 'USD' },
+            { from: 'USD', to: 'AED' },
+            { from: 'USD', to: 'SAR' }
+        ];
         
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.classList.add('refreshing');
-        }
-        
-        try {
-            await this.loadDashboardData();
-            this.showNotification('Data refreshed successfully', 'success');
-        } catch (error) {
-            this.showNotification('Refresh failed', 'error');
-        } finally {
-            if (refreshBtn) {
-                setTimeout(() => {
-                    refreshBtn.classList.remove('refreshing');
-                }, 1000);
+        for (const conv of conversions) {
+            const resultElement = document.getElementById(`quick_${conv.from}_${conv.to}`);
+            if (!resultElement) continue;
+            
+            try {
+                const conversion = await this.apiService.getCurrencyConversion(conv.from, conv.to);
+                if (conversion && conversion.rate) {
+                    const amount = 100;
+                    const converted = amount * conversion.rate;
+                    resultElement.textContent = `${Utils.formatNumber(converted, 2)} ${conv.to}`;
+                }
+            } catch (error) {
+                console.error(`خطأ في تحديث التحويل السريع ${conv.from} إلى ${conv.to}:`, error);
             }
         }
     }
-
-    startAutoRefresh() {
-        // Refresh every 5 minutes (300000 ms)
-        setInterval(() => {
-            console.log('🔄 Auto-refreshing data...');
-            this.loadDashboardData();
-        }, 5 * 60 * 1000);
+    
+    // تنفيذ التحويل
+    async performConversion() {
+        const fromCurrency = document.getElementById('fromCurrency').value;
+        const toCurrency = document.getElementById('toCurrency').value;
+        const amount = parseFloat(document.getElementById('amount').value) || 0;
+        const convertedAmountElement = document.getElementById('convertedAmount');
+        const conversionRateElement = document.getElementById('conversionRate');
         
-        console.log('⏰ Auto-refresh scheduled every 5 minutes');
+        if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) {
+            if (fromCurrency === toCurrency && amount > 0) {
+                convertedAmountElement.value = Utils.formatNumber(amount, 2);
+                conversionRateElement.textContent = `السعر: 1 ${fromCurrency} = 1 ${toCurrency}`;
+            }
+            return;
+        }
+        
+        // عرض تحميل
+        convertedAmountElement.value = 'جار الحساب...';
+        conversionRateElement.textContent = 'جاري جلب سعر الصرف...';
+        
+        try {
+            // جلب سعر الصرف
+            const conversion = await this.apiService.getCurrencyConversion(fromCurrency, toCurrency);
+            
+            if (conversion && conversion.rate) {
+                const rate = conversion.rate;
+                const converted = amount * rate;
+                
+                // تحديث النتائج
+                convertedAmountElement.value = Utils.formatNumber(converted, 2);
+                conversionRateElement.textContent = `السعر: 1 ${fromCurrency} = ${Utils.formatNumber(rate, 4)} ${toCurrency}`;
+                
+                // تخزين سعر الصرف
+                const key = `${fromCurrency}_${toCurrency}`;
+                this.conversionRates[key] = {
+                    rate: rate,
+                    timestamp: conversion.timestamp
+                };
+            } else {
+                throw new Error('لا توجد بيانات للتحويل');
+            }
+        } catch (error) {
+            console.error('خطأ في التحويل:', error);
+            convertedAmountElement.value = 'خطأ';
+            conversionRateElement.textContent = 'فشل جلب سعر الصرف';
+        }
     }
-
-    updateLastUpdateTime() {
-        const now = new Date();
-        this.lastUpdate = now;
+    
+    // إعداد التحديث التلقائي
+    setupAutoRefresh() {
+        // تحديث بيانات العملات كل ساعة
+        setInterval(() => {
+            this.loadForexData(true);
+            
+            // تحديث الأسهم بعد 5 دقائق لتوزيع الطلبات
+            setTimeout(() => {
+                this.loadStocksData(true);
+            }, 5 * 60 * 1000);
+            
+            // تحديث وقت آخر تحديث
+            this.updateLastUpdateTime();
+        }, CONFIG.UPDATE_INTERVAL);
         
-        const timeString = now.toLocaleTimeString('en-US', {
-            hour12: true,
-            hour: '2-digit',
-            minute: '2-digit'
+        // تحديث وقت العرض كل دقيقة
+        setInterval(() => {
+            this.updateLastUpdateTime();
+        }, 60 * 1000);
+    }
+    
+    // حفظ وقت آخر تحديث
+    saveLastUpdate() {
+        Utils.saveToStorage(CONFIG.STORAGE_KEYS.LAST_UPDATE, {
+            timestamp: new Date().getTime()
         });
         
-        this.updateElementText('lastUpdate', timeString);
-        this.updateElementText('rateUpdateTime', timeString);
+        this.updateLastUpdateTime();
     }
-
-    updateRequestCount() {
-        // Simulate request count (in a real app, this would come from API)
-        const requestCount = Math.floor(Math.random() * 500) + 1000;
-        this.updateElementText('requestCount', requestCount.toLocaleString());
-    }
-
-    updateElementText(elementId, text) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.textContent = text;
-        }
-    }
-
-    showNotification(message, type = 'info') {
-        // Check if notification system exists
-        if (typeof window.showNotification === 'function') {
-            window.showNotification(message, type);
+    
+    // تحديث وقت العرض
+    updateLastUpdateTime() {
+        const lastUpdateElement = document.getElementById('lastUpdateTime');
+        if (!lastUpdateElement) return;
+        
+        const lastUpdate = Utils.getFromStorage(CONFIG.STORAGE_KEYS.LAST_UPDATE);
+        
+        if (lastUpdate && lastUpdate.timestamp) {
+            const timeStr = Utils.formatDateTime(lastUpdate.timestamp);
+            lastUpdateElement.textContent = `آخر تحديث: ${timeStr}`;
         } else {
-            // Fallback notification
-            console.log(`${type.toUpperCase()}: ${message}`);
-            
-            // Create simple notification
-            const notification = document.createElement('div');
-            notification.className = `simple-notification ${type}`;
-            notification.textContent = message;
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-                color: white;
-                padding: 12px 24px;
-                border-radius: 8px;
-                z-index: 1000;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                animation: slideIn 0.3s ease;
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Remove after 3 seconds
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateX(100%)';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
+            lastUpdateElement.textContent = `آخر تحديث: الآن`;
         }
     }
-
-    debouncedConvert = this.debounce(() => {
-        this.convertCurrency();
-    }, 500);
-
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    loadSampleData() {
-        console.log('📋 Loading sample data for demo...');
-        this.loadSampleMetalsData();
-        this.loadSampleRatesData();
-    }
-
-    loadSampleMetalsData() {
-        // Sample metals data
-        const sampleMetals = {
-            gold24k: 2150.45,
-            gold22k: 1970.25,
-            gold21k: 1880.15,
-            gold18k: 1612.84,
-            silver: 24.85
-        };
+    
+    // تحديث عرض طلبات API
+    updateAPIRequestDisplay() {
+        const requests = Utils.getFromStorage(CONFIG.STORAGE_KEYS.API_REQUESTS) || {};
+        const today = new Date().toDateString();
         
-        this.updateElementText('goldPrice', `$${sampleMetals.gold24k.toFixed(2)}`);
-        this.updateElementText('goldPriceLive', `$${sampleMetals.gold24k.toFixed(2)}`);
-        this.updateElementText('silverPrice', `$${sampleMetals.silver.toFixed(2)}`);
-        this.updateElementText('silverPriceLive', `$${sampleMetals.silver.toFixed(2)}`);
-        
-        // Update karats
-        const karatPrices = {
-            '22K': sampleMetals.gold22k,
-            '21K': sampleMetals.gold21k,
-            '18K': sampleMetals.gold18k,
-            '14K': sampleMetals.gold24k * 0.583
-        };
-        
-        const karatItems = document.querySelectorAll('.karat-price');
-        if (karatItems.length > 0) {
-            const karats = ['22K', '21K', '18K', '14K'];
-            karatItems.forEach((item, index) => {
-                item.textContent = `$${karatPrices[karats[index]].toFixed(2)}`;
-            });
+        if (requests.date !== today) {
+            requests.date = today;
+            requests.count = 0;
+            Utils.saveToStorage(CONFIG.STORAGE_KEYS.API_REQUESTS, requests);
         }
-    }
-
-    loadSampleRatesData() {
-        // Sample rates data
-        this.updateElementText('usdSarRate', '3.7500');
-        this.updateElementText('usdEurRate', '0.9200');
         
-        // Trigger conversion with sample data
-        const amount = document.getElementById('amount').value;
-        if (amount && amount > 0) {
-            setTimeout(() => this.convertCurrency(), 1000);
+        const display = document.getElementById('apiRequests');
+        if (display) {
+            display.textContent = `طلبات API اليومية: ${requests.count || 0}/800`;
         }
     }
 }
 
-// Initialize the dashboard when the page loads
+// بدء التطبيق عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
-    window.DashboardApp = new DashboardApp();
+    window.app = new CurrencyStockApp();
 });
-
-// Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = DashboardApp;
-}
