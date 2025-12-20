@@ -2,7 +2,7 @@ const CONFIG = {
     API_KEY: 'b83fce53976843bbb59336c03f9a6a30',
     API_BASE_URL: 'https://api.twelvedata.com',
     
-    // العملات الرئيسية (20 عملة)
+    // العملات الرئيسية
     FOREX_PAIRS: [
         'EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'USD/CAD',
         'AUD/USD', 'NZD/USD', 'USD/CNY', 'USD/AED', 'USD/SAR',
@@ -46,13 +46,12 @@ const CONFIG = {
     },
     
     // تحديث كل ساعة
-    UPDATE_INTERVAL: 60 * 60 * 1000,
+    UPDATE_INTERVAL: 60 * 60 * 1000, // ساعة واحدة
     
-    // التخزين
+    // مفاتيح التخزين
     STORAGE_KEYS: {
-        FOREX_DATA: 'forex_market_data',
-        CONVERSION_RATES: 'conversion_rates',
-        LAST_UPDATE: 'market_last_update',
-        API_REQUESTS: 'daily_api_requests'
+        FOREX_DATA: 'forex_data_cache',
+        LAST_UPDATE: 'last_data_update',
+        API_COUNT: 'api_request_count'
     }
 };
