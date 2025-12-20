@@ -1,17 +1,20 @@
 // في ملف js/config.js
 const CONFIG = {
-    // رابط الصور الأساسي - التأكد من المسار الصحيح
+    // رابط الصور الأساسي - تأكد من المسار الصحيح!
     IMAGE_BASE_URL: "https://raw.githubusercontent.com/jamalkatabeuro-sketch/My-website/main/",
     
-    // دالة لإنشاء اسم الملف بناءً على رمز العملة
-    getImageFileName: (currencyCode) => {
-        // تحويل رمز العملة إلى أحرف صغيرة وإضافة x في النهاية
-        return `100-currency-${currencyCode.toLowerCase()}x.png`;
+    // دالة لإنشاء اسم الملف
+    getImageFileName: (flagCode) => {
+        // استثناء: AED بدون حرف x
+        if (flagCode === 'aed') {
+            return `100-currency-${flagCode}.png`;
+        }
+        return `100-currency-${flagCode}x.png`;
     },
     
-    // دالة للحصول على رابط الصورة الكامل
-    getImageUrl: (currencyCode) => {
-        return CONFIG.IMAGE_BASE_URL + CONFIG.getImageFileName(currencyCode);
+    // دالة للحصول على رابط الصورة
+    getImageUrl: (flagCode) => {
+        return CONFIG.IMAGE_BASE_URL + CONFIG.getImageFileName(flagCode);
     },
     
     // TwelveData API
@@ -22,7 +25,7 @@ const CONFIG = {
     REFRESH_INTERVAL: 60 * 60 * 1000, // تحديث كل ساعة
     CACHE_DURATION: 55 * 60 * 1000, // تخزين البيانات لمدة 55 دقيقة
     
-    // العملات المتاحة في التطبيق مع أسماء الصور المناسبة
+    // العملات المتاحة في التطبيق
     DEFAULT_CURRENCIES: [
         // العملات الأساسية
         { code: "USD", name: "US Dollar", symbol: "$", flagCode: "usd" },
@@ -37,33 +40,29 @@ const CONFIG = {
         // العملات العربية والإسلامية
         { code: "AED", name: "UAE Dirham", symbol: "د.إ", flagCode: "aed" },
         { code: "SAR", name: "Saudi Riyal", symbol: "ر.س", flagCode: "sar" },
-        { code: "QAR", name: "Qatari Riyal", symbol: "ر.ق", flagCode: "dar" }, // لاحظ: dar بدلاً من qar
+        { code: "QAR", name: "Qatari Riyal", symbol: "ر.ق", flagCode: "dar" },
         { code: "EGP", name: "Egyptian Pound", symbol: "£", flagCode: "egp" },
         
         // عملات أخرى
-        { code: "TRY", name: "Turkish Lira", symbol: "₺", flagCode: "trv" }, // trv بدلاً من try
+        { code: "TRY", name: "Turkish Lira", symbol: "₺", flagCode: "trv" },
         { code: "INR", name: "Indian Rupee", symbol: "₹", flagCode: "inr" },
         { code: "RUB", name: "Russian Ruble", symbol: "₽", flagCode: "rub" },
-        { code: "BRL", name: "Brazilian Real", symbol: "R$", flagCode: "brk" }, // brk بدلاً من brl
+        { code: "BRL", name: "Brazilian Real", symbol: "R$", flagCode: "brk" },
         { code: "ZAR", name: "South African Rand", symbol: "R", flagCode: "zar" },
         { code: "MXN", name: "Mexican Peso", symbol: "$", flagCode: "mxn" },
         { code: "KRW", name: "South Korean Won", symbol: "₩", flagCode: "krw" },
-        
-        // عملات إضافية من قائمتك
         { code: "MAD", name: "Moroccan Dirham", symbol: "د.م.", flagCode: "mad" },
         { code: "TND", name: "Tunisian Dinar", symbol: "د.ت", flagCode: "tnd" }
     ],
     
-    // تعيين رموز الصور الخاصة (حيث تختلف عن رموز العملات)
+    // تعيين رموز الصور الخاصة
     CURRENCY_FLAG_MAPPING: {
-        // العملات التي لها رموز صور مختلفة عن رموز العملات
-        "QAR": "dar",    // QAR يستخدم صورة dar
-        "TRY": "trv",    // TRY يستخدم صورة trv
-        "BRL": "brk",    // BRL يستخدم صورة brk
-        // يمكن إضافة المزيد إذا لزم الأمر
+        "QAR": "dar",
+        "TRY": "trv",
+        "BRL": "brk"
     },
     
-    // العملات التي سنجلب أسعارها من USD
+    // العملات المستهدفة لجلب أسعارها
     TARGET_CURRENCIES: [
         "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", 
         "AED", "SAR", "QAR", "EGP", "TRY", "INR", "RUB", 
@@ -73,7 +72,7 @@ const CONFIG = {
     // إصدار التطبيق
     APP_VERSION: "3.0.0",
     
-    // إعدادات التطبيق الافتراضية
+    // الإعدادات الافتراضية
     DEFAULT_SETTINGS: {
         theme: "light",
         language: "en",
