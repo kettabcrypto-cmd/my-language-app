@@ -1,0 +1,22 @@
+{
+  "24k": {
+    "name": "ذهب عيار 24",
+    "purity": 99.9,
+    "multiplier": 1.0
+  },
+  "22k": {
+    "name": "ذهب عيار 22",
+    "purity": 91.7,
+    "multiplier": 0.9167
+  },
+  "21k": {
+    "name": "ذهب عيار 21",
+    "purity": 87.5,
+    "multiplier": 0.875
+  },
+  "18k": {
+    "name": "ذهب عيار 18",
+    "purity": 75.0,
+    "multiplier": 0.75
+  }
+}
