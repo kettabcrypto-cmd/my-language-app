@@ -97,4 +97,33 @@ class Utils {
                 <div class="currency-price">
                     <div class="price">${Utils.formatNumber(currency.price, 4)}</div>
                     <div class="change ${change >= 0 ? 'positive' : 'negative'}">
-                        ${change >= 0 ? '+' : ''}${Utils.formatNumber(change, 4)}
+                        ${change >= 0 ? '+' : ''}${Utils.formatNumber(change, 4)} 
+                        (${change >= 0 ? '+' : ''}${Utils.formatNumber(changePercent, 2)}%)
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // إنشاء صف سهم
+    static createStockRow(stock, index) {
+        const change = stock.change || 0;
+        const changePercent = stock.percent_change || 0;
+        
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td class="symbol">${stock.symbol}</td>
+                <td class="name">${stock.name || stock.symbol}</td>
+                <td class="price">$${Utils.formatNumber(stock.price, 2)}</td>
+                <td class="${change >= 0 ? 'change-positive' : 'change-negative'}">
+                    ${change >= 0 ? '+' : ''}$${Utils.formatNumber(Math.abs(change), 2)}
+                </td>
+                <td class="${changePercent >= 0 ? 'change-positive' : 'change-negative'}">
+                    ${changePercent >= 0 ? '+' : ''}${Utils.formatNumber(changePercent, 2)}%
+                </td>
+                <td class="volume">${stock.volume ? Utils.formatNumber(stock.volume, 0) : 'N/A'}</td>
+            </tr>
+        `;
+    }
+}
