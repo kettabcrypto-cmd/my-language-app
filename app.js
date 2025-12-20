@@ -1,827 +1,550 @@
-// Main Forex Trading Application
-class ForexTradingApp {
+// Main application logic with auto-refresh
+
+class CurrencyConverterApp {
     constructor() {
-        this.api = forexAPI;
-        this.forexData = {};
-        this.watchlist = new Set();
-        this.updateInterval = null;
-        this.countdownInterval = null;
-        this.currentView = 'all';
-        this.currentSort = { field: 'symbol', order: 'asc' };
-        
-        this.init();
+        this.api = currencyAPI;
+        this.utils = Utils;
+        this.notificationTimeout = null;
+        this.initializeApp();
     }
-    
-    async init() {
-        console.log('Initializing Forex Trading App...');
-        
-        // Initialize all components
-        this.setupEventListeners();
-        this.setupNavigation();
-        this.populateCurrencySelectors();
-        this.loadWatchlist();
-        this.updateDateTime();
-        this.updateAPICounter();
-        
-        // Load initial data
-        await this.loadMarketData();
-        
-        // Setup auto-update
-        this.setupAutoUpdate();
-        
-        // Start countdown timer
-        this.startCountdownTimer();
-        
-        console.log('App initialized successfully');
-    }
-    
-    // Load market data
-    async loadMarketData() {
+
+    // تهيئة التطبيق
+    async initializeApp() {
         try {
-            this.forexData = await this.api.fetchAllForexData();
-            this.updateMarketTable();
-            this.updateQuickPairs();
-            this.updateStatsBar();
-            this.updateLastUpdateTime();
+            // تطبيق الثيم واللغة
+            this.utils.applyTheme(appState.theme);
+            this.utils.applyLanguage(appState.language);
             
-            // Update converter if active
-            if (document.getElementById('converter-section').classList.contains('active')) {
-                this.updateCurrencyConversion();
-            }
+            // تحميل أسعار الصرف
+            await this.loadExchangeRates();
+            
+            // تحديث الواجهة
+            this.updateRatesDisplay();
+            this.updateConverterDisplay();
+            this.updateLastUpdateDisplay();
+            
+            // إعداد المستمعين للأحداث
+            this.setupEventListeners();
+            
+            // بدء التحديث التلقائي
+            this.api.startAutoRefresh();
+            
+            // حفظ النسخة للنافذة للوصول من API
+            window.appInstance = this;
+            
+            console.log('Currency Converter App initialized successfully');
             
         } catch (error) {
-            console.error('Failed to load market data:', error);
-            this.showError('Failed to load market data. Using cached data.');
+            console.error('Error initializing app:', error);
+            this.showError('Failed to initialize app. Using cached data.');
+            
+            // استخدام البيانات المخزنة في حالة الفشل
+            if (!appState.exchangeRates) {
+                appState.exchangeRates = this.api.getDefaultRates();
+                this.updateRatesDisplay();
+                this.updateConverterDisplay();
+            }
         }
     }
-    
-    // Update market table
-    updateMarketTable() {
-        const tableBody = document.getElementById('marketTableBody');
-        if (!tableBody) return;
-        
-        if (!this.forexData || Object.keys(this.forexData).length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="empty-cell">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span>No market data available</span>
-                    </td>
-                </tr>
-            `;
-            return;
+
+    // تحميل أسعار الصرف
+    async loadExchangeRates() {
+        try {
+            const rates = await this.api.getAllRatesFromUSD();
+            appState.exchangeRates = rates;
+            this.utils.saveState();
+            
+            // تحديث عرض وقت التحديث
+            this.updateLastUpdateDisplay();
+            
+        } catch (error) {
+            console.error('Error loading exchange rates:', error);
+            
+            // استخدام البيانات المخزنة
+            const cachedData = this.api.getCachedRates();
+            if (cachedData) {
+                appState.exchangeRates = cachedData.rates;
+                console.log('Using cached rates due to error');
+            } else {
+                appState.exchangeRates = this.api.getDefaultRates();
+                console.log('Using default rates due to error');
+            }
+            
+            this.showError(`Using offline data: ${error.message}`);
         }
-        
-        let pairs = Object.keys(this.forexData);
-        
-        // Filter by view
-        pairs = this.filterPairsByView(pairs);
-        
-        // Sort pairs
-        pairs = this.sortPairs(pairs);
-        
-        // Generate table rows
-        let html = '';
-        pairs.forEach((pair, index) => {
-            const data = this.forexData[pair];
-            if (!data) return;
-            
-            const [from, to] = pair.split('/');
-            const rate = parseFloat(data.rate) || 0;
-            const high = parseFloat(data.high) || rate * 1.001;
-            const low = parseFloat(data.low) || rate * 0.999;
-            const bid = rate;
-            const ask = rate * 1.0002;
-            
-            // Calculate change (simulated)
-            const previousRate = this.getPreviousRate(pair);
-            const change = previousRate ? rate - previousRate : (Math.random() - 0.5) * 0.01;
-            const changePercent = previousRate ? (change / previousRate) * 100 : (Math.random() - 0.5) * 0.5;
-            
-            // Format time
-            const time = data.timestamp ? this.formatTime(data.timestamp) : '--:--';
-            
-            // Check if in watchlist
-            const isInWatchlist = this.watchlist.has(pair);
-            
-            html += `
-                <tr class="market-row" data-pair="${pair}">
-                    <td class="col-symbol">
-                        <div class="symbol-cell">
-                            <span class="currency-flag">${CONFIG.CURRENCY_FLAGS[from] || '🏳️'}</span>
-                            <div class="currency-info">
-                                <div class="currency-code">${pair}</div>
-                                <div class="currency-name">${CONFIG.CURRENCY_NAMES[from] || from}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="col-bid">
-                        <span class="price-cell bid-price">${this.formatPrice(bid, from)}</span>
-                    </td>
-                    <td class="col-ask">
-                        <span class="price-cell ask-price">${this.formatPrice(ask, from)}</span>
-                    </td>
-                    <td class="col-change">
-                        <span class="change-cell ${change >= 0 ? 'change-positive' : 'change-negative'}">
-                            ${change >= 0 ? '+' : ''}${this.formatPrice(change, from)}
-                            <br>
-                            <small>(${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)</small>
-                        </span>
-                    </td>
-                    <td class="col-high">
-                        <span class="price-cell">${this.formatPrice(high, from)}</span>
-                    </td>
-                    <td class="col-low">
-                        <span class="price-cell">${this.formatPrice(low, from)}</span>
-                    </td>
-                    <td class="col-time">
-                        <span class="time-cell">${time}</span>
-                    </td>
-                    <td class="col-actions">
-                        <div class="action-buttons">
-                            <button class="btn-icon ${isInWatchlist ? 'active' : ''}" 
-                                    data-action="watchlist" 
-                                    data-pair="${pair}"
-                                    title="${isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}">
-                                <i class="fas ${isInWatchlist ? 'fa-star' : 'fa-star'}"></i>
-                            </button>
-                            <button class="btn-icon" data-action="convert" data-pair="${pair}" title="Convert">
-                                <i class="fas fa-exchange-alt"></i>
-                            </button>
-                            <button class="btn-icon" data-action="chart" data-pair="${pair}" title="View Chart">
-                                <i class="fas fa-chart-line"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        });
-        
-        tableBody.innerHTML = html || `
-            <tr>
-                <td colspan="8" class="empty-cell">
-                    <i class="fas fa-search"></i>
-                    <span>No matching pairs found</span>
-                </td>
-            </tr>
-        `;
-        
-        // Add event listeners to action buttons
-        this.setupTableActions();
-        
-        // Save current rates for next comparison
-        this.saveCurrentRates();
     }
-    
-    // Update quick pairs grid
-    updateQuickPairs() {
-        const grid = document.getElementById('quickPairsGrid');
-        if (!grid) return;
+
+    // تحديث عرض وقت التحديث الأخير
+    updateLastUpdateDisplay() {
+        const updateInfo = this.api.getUpdateInfo();
         
-        let html = '';
-        CONFIG.QUICK_PAIRS.forEach(pair => {
-            const data = this.forexData[pair];
-            if (!data) return;
+        // يمكنك إضافة هذا في صفحة الإعدادات
+        const updateElement = document.getElementById('lastUpdateInfo');
+        if (updateElement) {
+            const lastUpdate = updateInfo.lastUpdate ? 
+                updateInfo.lastUpdate.toLocaleTimeString() : 'Never';
+            const nextUpdate = updateInfo.nextUpdate ? 
+                this.api.formatUpdateTime(updateInfo.nextUpdate) : 'Unknown';
             
-            const rate = parseFloat(data.rate) || 0;
-            const [from, to] = pair.split('/');
-            const previousRate = this.getPreviousRate(pair);
-            const change = previousRate ? rate - previousRate : 0;
-            const changePercent = previousRate ? (change / previousRate) * 100 : 0;
-            
-            html += `
-                <div class="pair-card" data-pair="${pair}">
-                    <div class="pair-header">
-                        <span class="pair-symbol">${pair}</span>
-                        <span class="pair-price ${change >= 0 ? 'change-positive' : 'change-negative'}">
-                            ${this.formatPrice(rate, from)}
-                        </span>
-                    </div>
-                    <div class="pair-details">
-                        <span>${CONFIG.CURRENCY_NAMES[from] || from}</span>
-                        <span class="${change >= 0 ? 'change-positive' : 'change-negative'}">
-                            ${change >= 0 ? '↗' : '↘'} ${changePercent.toFixed(2)}%
-                        </span>
+            updateElement.innerHTML = `
+                <div style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);">
+                    <div>Last update: ${lastUpdate}</div>
+                    <div>Next update: ${nextUpdate}</div>
+                    <div>API calls today: ${updateInfo.apiCallsToday}/24</div>
+                </div>
+            `;
+        }
+    }
+
+    // تحديث عرض أسعار العملات
+    updateRatesDisplay() {
+        const ratesList = document.getElementById('ratesList');
+        if (!ratesList) return;
+        
+        ratesList.innerHTML = '';
+        
+        if (!appState.exchangeRates) {
+            ratesList.innerHTML = `
+                <div class="rate-item">
+                    <div class="rate-info">
+                        <div class="currency-name">Loading rates...</div>
                     </div>
                 </div>
             `;
-        });
-        
-        grid.innerHTML = html || '<div class="pair-card">No data available</div>';
-        
-        // Add click events to quick pairs
-        document.querySelectorAll('.pair-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                const pair = card.getAttribute('data-pair');
-                const [from, to] = pair.split('/');
-                
-                // Set converter values
-                document.getElementById('fromCurrency').value = from;
-                document.getElementById('toCurrency').value = to;
-                document.getElementById('amount').value = '1000';
-                
-                // Update flags
-                document.getElementById('fromFlag').textContent = CONFIG.CURRENCY_FLAGS[from] || '🏳️';
-                document.getElementById('toFlag').textContent = CONFIG.CURRENCY_FLAGS[to] || '🏳️';
-                
-                // Switch to converter tab
-                document.querySelector('[data-tab="converter"]').click();
-                
-                // Update conversion
-                setTimeout(() => this.updateCurrencyConversion(), 100);
-            });
-        });
-    }
-    
-    // Update stats bar
-    updateStatsBar() {
-        if (!this.forexData || Object.keys(this.forexData).length === 0) return;
-        
-        let topGainer = { pair: '', change: -Infinity };
-        let topLoser = { pair: '', change: Infinity };
-        let totalPairs = 0;
-        let spreadSum = 0;
-        
-        Object.keys(this.forexData).forEach(pair => {
-            totalPairs++;
-            
-            const data = this.forexData[pair];
-            if (!data) return;
-            
-            const rate = parseFloat(data.rate) || 0;
-            const previousRate = this.getPreviousRate(pair);
-            
-            if (previousRate) {
-                const changePercent = ((rate - previousRate) / previousRate) * 100;
-                
-                if (changePercent > topGainer.change) {
-                    topGainer = { pair: pair, change: changePercent };
-                }
-                if (changePercent < topLoser.change) {
-                    topLoser = { pair: pair, change: changePercent };
-                }
-            }
-            
-            // Calculate spread (simplified)
-            const spread = rate * 0.0002; // 2 pips
-            spreadSum += spread;
-        });
-        
-        // Update DOM
-        document.getElementById('totalPairs').textContent = totalPairs;
-        document.getElementById('topGainer').textContent = topGainer.pair ? 
-            `${topGainer.pair} +${topGainer.change.toFixed(2)}%` : '--';
-        document.getElementById('topLoser').textContent = topLoser.pair ? 
-            `${topLoser.pair} ${topLoser.change.toFixed(2)}%` : '--';
-        document.getElementById('avgSpread').textContent = totalPairs > 0 ? 
-            `${(spreadSum / totalPairs).toFixed(1)} pips` : '--';
-        
-        // Set volatility based on average change
-        const volatility = Math.abs(topGainer.change) + Math.abs(topLoser.change);
-        const volatilityText = volatility > 2 ? 'HIGH' : volatility > 1 ? 'MEDIUM' : 'LOW';
-        document.getElementById('volatility').textContent = volatilityText;
-    }
-    
-    // Currency converter
-    async updateCurrencyConversion() {
-        const from = document.getElementById('fromCurrency').value;
-        const to = document.getElementById('toCurrency').value;
-        const amount = parseFloat(document.getElementById('amount').value) || 0;
-        
-        if (from === to) {
-            document.getElementById('convertedAmount').textContent = amount.toFixed(2);
-            document.getElementById('exchangeRate').textContent = `1 ${from} = 1 ${to}`;
-            document.getElementById('inverseRate').textContent = `1 ${to} = 1 ${from}`;
-            document.getElementById('rateSpread').textContent = '0.0000';
             return;
         }
         
-        try {
-            // Try to get rate from existing data first
-            let rate = this.getRateFromData(from, to);
+        appState.trackedCurrencies.forEach(currencyCode => {
+            const rate = appState.exchangeRates[currencyCode];
+            if (rate === undefined) return;
             
-            // If not found, fetch from API
-            if (!rate) {
-                const rateData = await this.api.fetchExchangeRate(from, to);
-                rate = rateData?.rate ? parseFloat(rateData.rate) : 0;
-            }
+            const currency = this.utils.getCurrencyInfo(currencyCode);
+            const rateItem = document.createElement('div');
+            rateItem.className = 'rate-item';
+            rateItem.innerHTML = `
+                <div class="currency-image-container">
+                    ${currencyCode}
+                </div>
+                <div class="rate-info">
+                    <div class="rate-header">
+                        <div class="currency-name">${currency.code}</div>
+                        <div class="rate-value">${this.utils.formatNumber(rate, 4)}</div>
+                    </div>
+                    <div class="currency-pair">${currency.code} / USD</div>
+                </div>
+                <div class="rate-actions">
+                    <button class="action-btn remove-btn" data-currency="${currency.code}" title="Remove">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `;
             
-            if (rate > 0) {
-                const converted = amount * rate;
-                document.getElementById('convertedAmount').textContent = converted.toFixed(2);
-                document.getElementById('exchangeRate').textContent = `1 ${from} = ${rate.toFixed(4)} ${to}`;
-                document.getElementById('inverseRate').textContent = `1 ${to} = ${(1/rate).toFixed(4)} ${from}`;
-                
-                // Calculate spread (bid-ask)
-                const spread = rate * 0.0002;
-                document.getElementById('rateSpread').textContent = spread.toFixed(4);
-            } else {
-                document.getElementById('convertedAmount').textContent = '--';
-                document.getElementById('exchangeRate').textContent = 'Rate not available';
-            }
+            // إضافة صورة العملة
+            const imgContainer = rateItem.querySelector('.currency-image-container');
+            const img = this.utils.createCurrencyImageElement(currencyCode);
+            imgContainer.innerHTML = '';
+            imgContainer.appendChild(img);
             
-        } catch (error) {
-            console.error('Conversion error:', error);
-            document.getElementById('convertedAmount').textContent = 'ERROR';
-        }
+            ratesList.appendChild(rateItem);
+        });
+        
+        // تحديث عرض وقت التحديث
+        this.updateLastUpdateDisplay();
     }
-    
-    // Setup event listeners
+
+    // تحديث عرض المحول
+    updateConverterDisplay() {
+        if (!appState.exchangeRates) return;
+        
+        const fromRate = appState.exchangeRates[appState.fromCurrency];
+        const toRate = appState.exchangeRates[appState.toCurrency];
+        
+        if (!fromRate || !toRate) return;
+        
+        // حساب السعر
+        const exchangeRate = toRate / fromRate;
+        const convertedAmount = appState.amount * exchangeRate;
+        
+        // تحديث القيم
+        document.getElementById('toAmount').value = this.utils.formatNumber(convertedAmount, 2);
+        document.getElementById('toCurrencyCode').textContent = appState.toCurrency;
+        document.getElementById('fromCurrencyCode').textContent = appState.fromCurrency;
+        
+        // تحديث معدل السوق
+        document.getElementById('midMarketRate').textContent = 
+            `${appState.fromCurrency} = ${exchangeRate.toFixed(4)} ${appState.toCurrency} at the mid-market rate`;
+        
+        // تحديث صور العملات
+        this.updateCurrencyImages();
+    }
+
+    // تحديث صور العملات
+    updateCurrencyImages() {
+        // صورة العملة المصدر
+        const fromImageContainer = document.getElementById('fromCurrencyImage');
+        fromImageContainer.innerHTML = '';
+        const fromImg = this.utils.createCurrencyImageElement(appState.fromCurrency);
+        fromImageContainer.appendChild(fromImg);
+        
+        // صورة العملة الهدف
+        const toImageContainer = document.getElementById('toCurrencyImage');
+        toImageContainer.innerHTML = '';
+        const toImg = this.utils.createCurrencyImageElement(appState.toCurrency);
+        toImageContainer.appendChild(toImg);
+    }
+
+    // إعداد المستمعين للأحداث
     setupEventListeners() {
-        // Refresh button
-        document.getElementById('refreshData').addEventListener('click', () => {
-            this.loadMarketData();
-        });
-        
-        // Converter inputs
-        document.getElementById('amount').addEventListener('input', () => {
-            this.updateCurrencyConversion();
-        });
-        
-        document.getElementById('fromCurrency').addEventListener('change', () => {
-            const from = document.getElementById('fromCurrency').value;
-            document.getElementById('fromFlag').textContent = CONFIG.CURRENCY_FLAGS[from] || '🏳️';
-            this.updateCurrencyConversion();
-        });
-        
-        document.getElementById('toCurrency').addEventListener('change', () => {
-            const to = document.getElementById('toCurrency').value;
-            document.getElementById('toFlag').textContent = CONFIG.CURRENCY_FLAGS[to] || '🏳️';
-            this.updateCurrencyConversion();
-        });
-        
-        // Swap currencies
-        document.getElementById('swapCurrencies').addEventListener('click', () => {
-            const from = document.getElementById('fromCurrency').value;
-            const to = document.getElementById('toCurrency').value;
-            
-            document.getElementById('fromCurrency').value = to;
-            document.getElementById('toCurrency').value = from;
-            
-            document.getElementById('fromFlag').textContent = CONFIG.CURRENCY_FLAGS[to] || '🏳️';
-            document.getElementById('toFlag').textContent = CONFIG.CURRENCY_FLAGS[from] || '🏳️';
-            
-            this.updateCurrencyConversion();
-        });
-        
-        // Global search
-        document.getElementById('globalSearch').addEventListener('input', (e) => {
-            this.filterMarketTable(e.target.value.toLowerCase());
-        });
-        
-        // View toggle buttons
-        document.querySelectorAll('.view-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                this.currentView = e.currentTarget.getAttribute('data-view');
-                this.updateMarketTable();
-            });
-        });
-        
-        // Sort controls
-        document.getElementById('sortBy').addEventListener('change', (e) => {
-            this.currentSort.field = e.target.value;
-            this.updateMarketTable();
-        });
-        
-        document.getElementById('sortOrder').addEventListener('change', (e) => {
-            this.currentSort.order = e.target.value;
-            this.updateMarketTable();
-        });
-        
-        // Add to watchlist button
-        document.getElementById('addToWatchlist')?.addEventListener('click', () => {
-            this.promptAddToWatchlist();
-        });
-        
-        // Browse pairs button
-        document.getElementById('browsePairs')?.addEventListener('click', () => {
-            document.querySelector('[data-tab="forex"]').click();
-        });
-    }
-    
-    // Setup table action buttons
-    setupTableActions() {
-        document.querySelectorAll('.btn-icon[data-action="watchlist"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const pair = btn.getAttribute('data-pair');
-                this.toggleWatchlist(pair);
-                
-                // Update button state
-                const isInWatchlist = this.watchlist.has(pair);
-                btn.classList.toggle('active', isInWatchlist);
-                btn.innerHTML = `<i class="fas ${isInWatchlist ? 'fa-star' : 'fa-star'}"></i>`;
-                btn.title = isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist';
-            });
-        });
-        
-        document.querySelectorAll('.btn-icon[data-action="convert"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const pair = btn.getAttribute('data-pair');
-                const [from, to] = pair.split('/');
-                
-                // Set converter values
-                document.getElementById('fromCurrency').value = from;
-                document.getElementById('toCurrency').value = to;
-                document.getElementById('amount').value = '1000';
-                
-                // Update flags
-                document.getElementById('fromFlag').textContent = CONFIG.CURRENCY_FLAGS[from] || '🏳️';
-                document.getElementById('toFlag').textContent = CONFIG.CURRENCY_FLAGS[to] || '🏳️';
-                
-                // Switch to converter tab
-                document.querySelector('[data-tab="converter"]').click();
-                
-                // Update conversion
-                setTimeout(() => this.updateCurrencyConversion(), 100);
-            });
-        });
-        
-        // Chart button (placeholder)
-        document.querySelectorAll('.btn-icon[data-action="chart"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const pair = btn.getAttribute('data-pair');
-                alert(`Chart view for ${pair} would open here.`);
-            });
-        });
-        
-        // Row click
-        document.querySelectorAll('.market-row').forEach(row => {
-            row.addEventListener('click', (e) => {
-                if (!e.target.closest('.btn-icon')) {
-                    const pair = row.getAttribute('data-pair');
-                    // Could show detailed view or chart
-                }
-            });
-        });
-    }
-    
-    // Setup navigation
-    setupNavigation() {
+        // التنقل بين الصفحات
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                
-                // Update active nav item
-                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                item.classList.add('active');
-                
-                // Show corresponding section
-                const tab = item.getAttribute('data-tab');
-                document.querySelectorAll('.content-section').forEach(section => {
-                    section.classList.remove('active');
-                });
-                document.getElementById(`${tab}-section`).classList.add('active');
-                
-                // Update converter if needed
-                if (tab === 'converter') {
-                    this.updateCurrencyConversion();
-                }
-                
-                // Update watchlist if needed
-                if (tab === 'watchlist') {
-                    this.updateWatchlistDisplay();
-                }
+                this.switchPage(item.dataset.page);
             });
         });
-    }
-    
-    // Populate currency selectors
-    populateCurrencySelectors() {
-        const fromSelect = document.getElementById('fromCurrency');
-        const toSelect = document.getElementById('toCurrency');
         
-        // Clear existing options
-        fromSelect.innerHTML = '';
-        toSelect.innerHTML = '';
-        
-        // Add currency options
-        Object.keys(CONFIG.CURRENCY_NAMES).forEach(code => {
-            const option1 = document.createElement('option');
-            const option2 = document.createElement('option');
-            
-            option1.value = option2.value = code;
-            option1.textContent = option2.textContent = `${code} - ${CONFIG.CURRENCY_NAMES[code]}`;
-            
-            fromSelect.appendChild(option1);
-            toSelect.appendChild(option2);
+        // تغيير اللغة
+        document.getElementById('languageSelector').addEventListener('change', (e) => {
+            this.utils.applyLanguage(e.target.value);
         });
         
-        // Set default values
-        fromSelect.value = 'USD';
-        toSelect.value = 'EUR';
-        document.getElementById('fromFlag').textContent = CONFIG.CURRENCY_FLAGS.USD;
-        document.getElementById('toFlag').textContent = CONFIG.CURRENCY_FLAGS.EUR;
+        // تبديل العملات
+        document.getElementById('swapCurrencies').addEventListener('click', () => {
+            this.swapCurrencies();
+        });
         
-        // Populate popular conversions
-        this.populatePopularConversions();
+        // تغيير عملة المصدر
+        document.getElementById('changeFromCurrencyBtn').addEventListener('click', () => {
+            this.showChangeCurrencyModal('from');
+        });
+        
+        // تغيير عملة الوجهة
+        document.getElementById('changeToCurrencyBtn').addEventListener('click', () => {
+            this.showChangeCurrencyModal('to');
+        });
+        
+        // إدخال المبلغ
+        document.getElementById('fromAmount').addEventListener('input', (e) => {
+            this.handleAmountInput(e.target.value);
+        });
+        
+        // زر إضافة عملة
+        document.getElementById('addCurrencyBtn').addEventListener('click', () => {
+            this.showAddCurrencyModal();
+        });
+        
+        // إغلاق النوافذ
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            this.hideModal('addCurrencyModal');
+        });
+        
+        document.getElementById('closeChangeModalBtn').addEventListener('click', () => {
+            this.hideModal('changeCurrencyModal');
+        });
+        
+        // إغلاق النوافذ عند النقر خارجها
+        document.getElementById('addCurrencyModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                this.hideModal('addCurrencyModal');
+            }
+        });
+        
+        document.getElementById('changeCurrencyModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                this.hideModal('changeCurrencyModal');
+            }
+        });
+        
+        // تغيير الثيم
+        document.querySelectorAll('.theme-option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.utils.applyTheme(e.target.dataset.theme);
+            });
+        });
+        
+        // تحديث يدوي (إضافة زر جديد في الإعدادات)
+        this.setupRefreshButton();
+        
+        // التعامل مع الأحداث بالتفويض
+        document.addEventListener('click', (e) => {
+            this.handleDelegatedEvents(e);
+        });
     }
-    
-    // Populate popular conversions
-    populatePopularConversions() {
-        const grid = document.getElementById('popularConversions');
-        if (!grid) return;
+
+    // التعامل مع الأحداث بالتفويض
+    handleDelegatedEvents(e) {
+        // إزالة عملة من القائمة
+        if (e.target.closest('.remove-btn')) {
+            const btn = e.target.closest('.remove-btn');
+            const currencyCode = btn.dataset.currency;
+            this.removeCurrency(currencyCode);
+        }
         
-        let html = '';
-        CONFIG.POPULAR_CONVERSIONS.forEach(conv => {
-            html += `
-                <button class="conversion-btn" 
-                        data-from="${conv.from}" 
-                        data-to="${conv.to}"
-                        data-amount="${conv.amount}">
-                    ${conv.label}
+        // إضافة عملة من النافذة المنبثقة
+        if (e.target.closest('.add-currency-modal-btn')) {
+            const btn = e.target.closest('.add-currency-modal-btn');
+            const currencyCode = btn.dataset.currency;
+            this.addCurrency(currencyCode);
+        }
+        
+        // اختيار عملة في نافذة التغيير
+        if (e.target.closest('.currency-option') && 
+            e.target.closest('#changeCurrencyList')) {
+            const option = e.target.closest('.currency-option');
+            const currencyCode = option.dataset.currency;
+            this.selectCurrencyForConversion(currencyCode);
+        }
+    }
+
+    // إضافة زر التحديث في الإعدادات
+    setupRefreshButton() {
+        const settingsGroup = document.querySelector('#settingsPage .settings-section');
+        
+        if (settingsGroup) {
+            const refreshSection = document.createElement('div');
+            refreshSection.className = 'settings-group';
+            refreshSection.innerHTML = `
+                <div class="group-title">Data & Updates</div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Refresh Rates</h3>
+                        <p>Manually update exchange rates</p>
+                        <div id="lastUpdateInfo"></div>
+                    </div>
+                    <button class="theme-option" id="manualRefreshBtn" style="background-color: var(--primary-color); color: white;">
+                        <i class="fas fa-sync-alt"></i> Refresh Now
+                    </button>
+                </div>
+            `;
+            
+            settingsGroup.appendChild(refreshSection);
+            
+            // إضافة مستمع الحدث
+            document.getElementById('manualRefreshBtn').addEventListener('click', async () => {
+                const btn = document.getElementById('manualRefreshBtn');
+                const originalText = btn.innerHTML;
+                
+                try {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+                    btn.disabled = true;
+                    
+                    await this.api.refreshRates();
+                    this.showNotification('Rates updated successfully!');
+                    
+                } catch (error) {
+                    this.showError(`Update failed: ${error.message}`);
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            });
+        }
+    }
+
+    // التبديل بين الصفحات
+    switchPage(pageId) {
+        // تحديث التبويب النشط
+        document.querySelectorAll('.nav-item').forEach(nav => {
+            nav.classList.remove('active');
+        });
+        
+        document.querySelector(`.nav-item[data-page="${pageId}"]`).classList.add('active');
+        
+        // إظهار الصفحة المحددة
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.remove('active');
+        });
+        document.getElementById(pageId).classList.add('active');
+    }
+
+    // تبديل العملات
+    swapCurrencies() {
+        [appState.fromCurrency, appState.toCurrency] = [appState.toCurrency, appState.fromCurrency];
+        this.utils.saveState();
+        this.updateConverterDisplay();
+    }
+
+    // معالجة إدخال المبلغ
+    handleAmountInput(value) {
+        const sanitized = this.utils.sanitizeAmountInput(value);
+        const amount = parseFloat(sanitized) || 0;
+        
+        appState.amount = amount;
+        this.utils.saveState();
+        this.updateConverterDisplay();
+    }
+
+    // إظهار نافذة إضافة عملة
+    showAddCurrencyModal() {
+        const modal = document.getElementById('addCurrencyModal');
+        const list = document.getElementById('availableCurrenciesList');
+        
+        list.innerHTML = '';
+        
+        // إظهار العملات غير المضافة
+        CONFIG.DEFAULT_CURRENCIES.forEach(currency => {
+            if (appState.trackedCurrencies.includes(currency.code)) {
+                return;
+            }
+            
+            const option = document.createElement('div');
+            option.className = 'currency-option';
+            option.dataset.currency = currency.code;
+            option.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                    <div style="width: 40px; height: 40px; flex-shrink: 0; background-color: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">
+                        ${currency.code}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 14px;">${currency.code}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${currency.name}</div>
+                    </div>
+                </div>
+                <button class="action-btn add-currency-modal-btn" data-currency="${currency.code}" style="border-color: var(--primary-color); color: var(--primary-color);">
+                    <i class="fas fa-plus"></i>
                 </button>
             `;
+            
+            list.appendChild(option);
         });
         
-        grid.innerHTML = html;
+        if (list.children.length === 0) {
+            list.innerHTML = `<div style="text-align: center; padding: 30px 20px; color: var(--text-secondary);">All currencies are already added</div>`;
+        }
         
-        // Add event listeners
-        document.querySelectorAll('.conversion-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const from = btn.getAttribute('data-from');
-                const to = btn.getAttribute('data-to');
-                const amount = btn.getAttribute('data-amount');
-                
-                document.getElementById('fromCurrency').value = from;
-                document.getElementById('toCurrency').value = to;
-                document.getElementById('amount').value = amount;
-                
-                document.getElementById('fromFlag').textContent = CONFIG.CURRENCY_FLAGS[from] || '🏳️';
-                document.getElementById('toFlag').textContent = CONFIG.CURRENCY_FLAGS[to] || '🏳️';
-                
-                this.updateCurrencyConversion();
-            });
+        modal.classList.add('active');
+    }
+
+    // إظهار نافذة تغيير العملة
+    showChangeCurrencyModal(type) {
+        appState.changingCurrency = type;
+        const modal = document.getElementById('changeCurrencyModal');
+        const title = document.getElementById('changeCurrencyTitle');
+        const list = document.getElementById('changeCurrencyList');
+        
+        title.textContent = type === 'from' ? 'Select From Currency' : 'Select To Currency';
+        list.innerHTML = '';
+        
+        // إظهار جميع العملات المتاحة
+        CONFIG.DEFAULT_CURRENCIES.forEach(currency => {
+            const rate = appState.exchangeRates ? appState.exchangeRates[currency.code] : 1;
+            const isSelected = (type === 'from' && currency.code === appState.fromCurrency) || 
+                              (type === 'to' && currency.code === appState.toCurrency);
+            
+            const option = document.createElement('div');
+            option.className = `currency-option ${isSelected ? 'selected' : ''}`;
+            option.dataset.currency = currency.code;
+            option.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                    <div style="width: 40px; height: 40px; flex-shrink: 0; background-color: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">
+                        ${currency.code}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 14px;">${currency.code}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${currency.name} - ${rate ? rate.toFixed(4) : 'N/A'}</div>
+                    </div>
+                </div>
+                ${isSelected ? '<i class="fas fa-check" style="color: var(--primary-color);"></i>' : ''}
+            `;
+            
+            list.appendChild(option);
         });
-    }
-    
-    // Watchlist management
-    loadWatchlist() {
-        try {
-            const saved = localStorage.getItem(CONFIG.STORAGE_KEYS.WATCHLIST);
-            if (saved) {
-                this.watchlist = new Set(JSON.parse(saved));
-            }
-        } catch (error) {
-            console.error('Error loading watchlist:', error);
-        }
-    }
-    
-    saveWatchlist() {
-        try {
-            localStorage.setItem(CONFIG.STORAGE_KEYS.WATCHLIST, 
-                JSON.stringify(Array.from(this.watchlist)));
-        } catch (error) {
-            console.error('Error saving watchlist:', error);
-        }
-    }
-    
-    toggleWatchlist(pair) {
-        if (this.watchlist.has(pair)) {
-            this.watchlist.delete(pair);
-        } else {
-            this.watchlist.add(pair);
-        }
-        this.saveWatchlist();
-        this.updateWatchlistDisplay();
-    }
-    
-    updateWatchlistDisplay() {
-        const emptyDiv = document.getElementById('emptyWatchlist');
-        const tableDiv = document.getElementById('watchlistTable');
         
-        if (this.watchlist.size === 0) {
-            emptyDiv.style.display = 'flex';
-            tableDiv.style.display = 'none';
-            return;
+        modal.classList.add('active');
+    }
+
+    // إخفاء النافذة المنبثقة
+    hideModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    }
+
+    // إضافة عملة للمتابعة
+    addCurrency(currencyCode) {
+        if (!appState.trackedCurrencies.includes(currencyCode)) {
+            appState.trackedCurrencies.push(currencyCode);
+            this.utils.saveState();
+            this.updateRatesDisplay();
+            this.showAddCurrencyModal(); // تحديث النافذة
+            this.showNotification(`${currencyCode} added to tracked currencies`);
+        }
+    }
+
+    // إزالة عملة من المتابعة
+    removeCurrency(currencyCode) {
+        const index = appState.trackedCurrencies.indexOf(currencyCode);
+        if (index > -1) {
+            appState.trackedCurrencies.splice(index, 1);
+            this.utils.saveState();
+            this.updateRatesDisplay();
+            this.showNotification(`${currencyCode} removed from tracked currencies`);
+        }
+    }
+
+    // اختيار عملة للتحويل
+    selectCurrencyForConversion(currencyCode) {
+        if (appState.changingCurrency === 'from') {
+            appState.fromCurrency = currencyCode;
+        } else if (appState.changingCurrency === 'to') {
+            appState.toCurrency = currencyCode;
         }
         
-        emptyDiv.style.display = 'none';
-        tableDiv.style.display = 'block';
+        this.utils.saveState();
+        this.updateConverterDisplay();
+        this.hideModal('changeCurrencyModal');
+    }
+
+    // عرض إشعار
+    showNotification(message, duration = 3000) {
+        // إزالة الإشعار السابق إن وجد
+        const existingNotification = document.querySelector('.app-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
         
-        // Update watchlist table (simplified for now)
-        tableDiv.innerHTML = `
-            <div class="watchlist-info">
-                <i class="fas fa-star"></i>
-                <h3>${this.watchlist.size} pairs in watchlist</h3>
-                <p>Click on any pair in the Forex tab to add more</p>
+        // إنشاء إشعار جديد
+        const notification = document.createElement('div');
+        notification.className = 'app-notification';
+        notification.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 70px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: var(--primary-color);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 1000;
+                font-size: 14px;
+                font-weight: 500;
+                max-width: 90%;
+                text-align: center;
+                animation: slideDown 0.3s ease;
+            ">
+                <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+                ${message}
             </div>
         `;
-    }
-    
-    promptAddToWatchlist() {
-        // Simple prompt for demo
-        const pair = prompt('Enter currency pair (e.g., EUR/USD):');
-        if (pair && /^[A-Z]{3}\/[A-Z]{3}$/.test(pair)) {
-            this.toggleWatchlist(pair.toUpperCase());
-            alert(`${pair} added to watchlist`);
-        } else if (pair) {
-            alert('Invalid format. Use format like EUR/USD');
-        }
-    }
-    
-    // Filter and sort helpers
-    filterPairsByView(pairs) {
-        switch (this.currentView) {
-            case 'majors':
-                return pairs.filter(pair => 
-                    ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'USD/CAD', 'AUD/USD', 'NZD/USD'].includes(pair));
-            case 'minors':
-                return pairs.filter(pair => 
-                    pair.includes('USD') && !['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CHF', 'USD/CAD', 'AUD/USD', 'NZD/USD'].includes(pair));
-            case 'exotics':
-                return pairs.filter(pair => 
-                    !pair.includes('USD') || ['USD/TRY', 'USD/ZAR', 'USD/MXN'].includes(pair));
-            default:
-                return pairs;
-        }
-    }
-    
-    sortPairs(pairs) {
-        return pairs.sort((a, b) => {
-            const dataA = this.forexData[a];
-            const dataB = this.forexData[b];
-            
-            if (!dataA || !dataB) return 0;
-            
-            let valueA, valueB;
-            
-            switch (this.currentSort.field) {
-                case 'price':
-                    valueA = parseFloat(dataA.rate) || 0;
-                    valueB = parseFloat(dataB.rate) || 0;
-                    break;
-                case 'change':
-                    const prevA = this.getPreviousRate(a);
-                    const prevB = this.getPreviousRate(b);
-                    valueA = prevA ? ((parseFloat(dataA.rate) - prevA) / prevA) : 0;
-                    valueB = prevB ? ((parseFloat(dataB.rate) - prevB) / prevB) : 0;
-                    break;
-                case 'symbol':
-                default:
-                    valueA = a;
-                    valueB = b;
+        
+        document.body.appendChild(notification);
+        
+        // إخفاء الإشعار بعد المدة المحددة
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.style.animation = 'slideUp 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
             }
-            
-            if (this.currentSort.order === 'desc') {
-                return valueB - valueA;
-            } else {
-                return valueA > valueB ? 1 : -1;
-            }
-        });
+        }, duration);
     }
-    
-    filterMarketTable(searchTerm) {
-        const rows = document.querySelectorAll('.market-row');
-        
-        if (!searchTerm) {
-            rows.forEach(row => row.style.display = '');
-            return;
-        }
-        
-        rows.forEach(row => {
-            const pair = row.getAttribute('data-pair');
-            const display = pair.toLowerCase().includes(searchTerm) ? '' : 'none';
-            row.style.display = display;
-        });
-    }
-    
-    // Rate helpers
-    getPreviousRate(pair) {
-        const cached = localStorage.getItem(`prev_${pair}`);
-        return cached ? parseFloat(cached) : null;
-    }
-    
-    saveCurrentRates() {
-        Object.keys(this.forexData).forEach(pair => {
-            const data = this.forexData[pair];
-            if (data && data.rate) {
-                localStorage.setItem(`prev_${pair}`, data.rate);
-            }
-        });
-    }
-    
-    getRateFromData(from, to) {
-        if (from === to) return 1;
-        
-        // Direct pair
-        const directPair = `${from}/${to}`;
-        if (this.forexData[directPair] && this.forexData[directPair].rate) {
-            return parseFloat(this.forexData[directPair].rate);
-        }
-        
-        // Inverse pair
-        const inversePair = `${to}/${from}`;
-        if (this.forexData[inversePair] && this.forexData[inversePair].rate) {
-            return 1 / parseFloat(this.forexData[inversePair].rate);
-        }
-        
-        return null;
-    }
-    
-    // Format helpers
-    formatPrice(price, currency) {
-        if (currency === 'JPY') {
-            return price.toFixed(2);
-        } else {
-            return price.toFixed(4);
-        }
-    }
-    
-    formatTime(timestamp) {
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-    }
-    
-    // Update time and counters
-    updateDateTime() {
-        const now = new Date();
-        document.getElementById('serverTime').textContent = 
-            now.toLocaleTimeString('en-US', { hour12: false });
-        
-        // Update every second
-        setTimeout(() => this.updateDateTime(), 1000);
-    }
-    
-    updateLastUpdateTime() {
-        const now = new Date();
-        document.getElementById('lastUpdateTime').textContent = 
-            now.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: false 
-            });
-        
-        // Update storage
-        localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_UPDATE, now.getTime());
-    }
-    
-    updateAPICounter() {
-        const requests = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.API_REQUESTS) || '{}');
-        const today = new Date().toDateString();
-        
-        if (requests.date !== today) {
-            requests.date = today;
-            requests.count = 0;
-            localStorage.setItem(CONFIG.STORAGE_KEYS.API_REQUESTS, JSON.stringify(requests));
-        }
-        
-        document.getElementById('apiCount').textContent = requests.count || 0;
-    }
-    
-    // Auto update system
-    setupAutoUpdate() {
-        // Clear existing interval
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-        }
-        
-        // Set new interval (1 hour)
-        this.updateInterval = setInterval(() => {
-            console.log('Auto-updating market data...');
-            this.loadMarketData();
-        }, CONFIG.UPDATE_INTERVAL);
-    }
-    
-    startCountdownTimer() {
-        let seconds = 60 * 60; // 1 hour in seconds
-        
-        const updateCountdown = () => {
-            const minutes = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            document.getElementById('nextUpdate').textContent = 
-                `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            
-            seconds--;
-            
-            if (seconds < 0) {
-                seconds = 60 * 60; // Reset to 1 hour
-            }
-        };
-        
-        // Update immediately
-        updateCountdown();
-        
-        // Update every second
-        this.countdownInterval = setInterval(updateCountdown, 1000);
-    }
-    
-    // Error handling
-    showError(message) {
-        console.error(message);
-        // Could show a toast notification here
+
+    // عرض خطأ
+    showError(message, duration = 5000) {
+        this.showNotification(`<i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i> ${message}`, duration);
     }
 }
 
-// Initialize app when DOM is loaded
+// بدء التطبيق عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
-    window.forexApp = new ForexTradingApp();
+    new CurrencyConverterApp();
 });
