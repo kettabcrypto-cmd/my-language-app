@@ -1,4 +1,4 @@
-/* إضافة في نهاية ملف styles.css */
+/* إضافة هذه الأنيميشن في نهاية الملف */
 
 /* أنيميشن للإشعارات */
 @keyframes slideDown {
@@ -23,18 +23,34 @@
     }
 }
 
-/* تحسين التحميل */
+/* تأثير التحميل */
 .loading-spinner {
     display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--text-secondary);
-    border-top: 2px solid var(--primary-color);
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 178, 169, 0.3);
     border-radius: 50%;
+    border-top-color: var(--primary-color);
     animation: spin 1s linear infinite;
+    margin-right: 10px;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* تحديث العرض على الهواتف */
+@media (max-width: 480px) {
+    .rate-item {
+        padding: 12px;
+    }
+    
+    .currency-image-container {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .rate-value {
+        font-size: 14px;
+    }
 }
