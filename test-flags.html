@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار صور العملات - CurrencyPro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            direction: rtl;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stats {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        .flags-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .flag-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .flag-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            border-color: #667eea;
+        }
+        
+        .flag-card.success {
+            border-color: #28a745;
+        }
+        
+        .flag-card.error {
+            border-color: #dc3545;
+        }
+        
+        .flag-image {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+        }
+        
+        .flag-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .currency-code {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .currency-name {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .url-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            word-break: break-all;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .flags-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            
+            .stat-item {
+                min-width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 اختبار تحميل صور العملات</h1>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">إجمالي العملات</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="successCount">0</div>
+                <div class="stat-label">تم تحميلها بنجاح</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="errorCount">0</div>
+                <div class="stat-label">فشل التحميل</div>
+            </div>
+        </div>
+        
+        <div class="url-info">
+            <strong>رابط الصور الأساسي:</strong><br>
+            <span id="baseUrl">https://raw.githubusercontent.com/jamalkatabeuro-sketch/My-website/main/</span>
+        </div>
+        
+        <div class="flags-grid" id="flagsContainer">
+            <!-- سيتم تعبئته بالـ JavaScript -->
+        </div>
+        
+        <div class="controls">
+            <button class="btn-primary" onclick="loadAllFlags()">
+                <i class="fas fa-sync-alt"></i> تحميل جميع الصور
+            </button>
+            <button class="btn-secondary" onclick="testSpecificFlags()">
+                <i class="fas fa-vial"></i> اختبار الصور الأساسية
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // إعدادات التطبيق
+        const CONFIG = {
+            BASE_URL: "https://raw.githubusercontent.com/jamalkatabeuro-sketch/My-website/main/",
+            
+            // قائمة العملات الكاملة
+            ALL_CURRENCIES: [
+                { code: "USD", name: "US Dollar", flag: "usd" },
+                { code: "EUR", name: "Euro", flag: "eur" },
+                { code: "GBP", name: "British Pound", flag: "gbp" },
+                { code: "JPY", name: "Japanese Yen", flag: "jpy" },
+                { code: "CAD", name: "Canadian Dollar", flag: "cad" },
+                { code: "AUD", name: "Australian Dollar", flag: "aud" },
+                { code: "CHF", name: "Swiss Franc", flag: "chf" },
+                { code: "CNY", name: "Chinese Yuan", flag: "cny" },
+                { code: "AED", name: "UAE Dirham", flag: "aed" },
+                { code: "SAR", name: "Saudi Riyal", flag: "sar" },
+                { code: "QAR", name: "Qatari Riyal", flag: "dar" },
+                { code: "EGP", name: "Egyptian Pound", flag: "egp" },
+                { code: "TRY", name: "Turkish Lira", flag: "trv" },
+                { code: "INR", name: "Indian Rupee", flag: "inr" },
+                { code: "RUB", name: "Russian Ruble", flag: "rub" },
+                { code: "BRL", name: "Brazilian Real", flag: "brk" },
+                { code: "ZAR", name: "South African Rand", flag: "zar" },
+                { code: "MXN", name: "Mexican Peso", flag: "mxn" },
+                { code: "KRW", name: "South Korean Won", flag: "krw" },
+                { code: "MAD", name: "Moroccan Dirham", flag: "mad" },
+                { code: "TND", name: "Tunisian Dinar", flag: "tnd" }
+            ],
+            
+            // الصور الأساسية للتأكد من وجودها
+            ESSENTIAL_FLAGS: [
+                { code: "EUR", name: "Euro", flag: "eur" },
+                { code: "CAD", name: "Canadian Dollar", flag: "cad" },
+                { code: "CHF", name: "Swiss Franc", flag: "chf" },
+                { code: "AUD", name: "Australian Dollar", flag: "aud" },
+                { code: "KRW", name: "South Korean Won", flag: "krw" },
+                { code: "MXN", name: "Mexican Peso", flag: "mxn" },
+                { code: "RUB", name: "Russian Ruble", flag: "rub" },
+                { code: "MAD", name: "Moroccan Dirham", flag: "mad" },
+                { code: "TND", name: "Tunisian Dinar", flag: "tnd" },
+                { code: "SAR", name: "Saudi Riyal", flag: "sar" },
+                { code: "AED", name: "UAE Dirham", flag: "aed" }
+            ]
+        };
+
+        let stats = {
+            total: 0,
+            success: 0,
+            error: 0
+        };
+
+        // تحديث الإحصائيات
+        function updateStats() {
+            document.getElementById('totalCount').textContent = stats.total;
+            document.getElementById('successCount').textContent = stats.success;
+            document.getElementById('errorCount').textContent = stats.error;
+        }
+
+        // إنشاء رابط الصورة
+        function getImageUrl(flagCode) {
+            // استثناء: AED بدون حرف x في النهاية
+            if (flagCode === 'aed') {
+                return `${CONFIG.BASE_URL}100-currency-${flagCode}.png`;
+            }
+            return `${CONFIG.BASE_URL}100-currency-${flagCode}x.png`;
+        }
+
+        // تحميل صورة واحدة
+        function loadFlagImage(currency) {
+            return new Promise((resolve) => {
+                const imgUrl = getImageUrl(currency.flag);
+                const img = new Image();
+                
+                img.onload = () => {
+                    resolve({
+                        currency: currency,
+                        success: true,
+                        url: imgUrl
+                    });
+                };
+                
+                img.onerror = () => {
+                    resolve({
+                        currency: currency,
+                        success: false,
+                        url: imgUrl
+                    });
+                };
+                
+                img.src = imgUrl;
+            });
+        }
+
+        // إنشاء بطاقة علم
+        function createFlagCard(currency, success, url) {
+            const card = document.createElement('div');
+            card.className = `flag-card ${success ? 'success' : 'error'}`;
+            
+            card.innerHTML = `
+                <div class="flag-image">
+                    ${success ? 
+                        `<img src="${url}" alt="${currency.code}">` : 
+                        `<div class="placeholder">${currency.code}</div>`
+                    }
+                </div>
+                <div class="currency-code">${currency.code}</div>
+                <div class="currency-name">${currency.name}</div>
+                <div class="status ${success ? 'success' : 'error'}">
+                    ${success ? '✅ تم التحميل' : '❌ فشل التحميل'}
+                </div>
+            `;
+            
+            card.addEventListener('click', () => {
+                alert(`رابط الصورة:\n${url}\n\nالعملة: ${currency.name} (${currency.code})`);
+            });
+            
+            return card;
+        }
+
+        // تحميل جميع الأعلام
+        async function loadAllFlags() {
+            const container = document.getElementById('flagsContainer');
+            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">⏳ جاري تحميل الصور...</div>';
+            
+            stats = { total: 0, success: 0, error: 0 };
+            
+            setTimeout(async () => {
+                container.innerHTML = '';
+                
+                for (const currency of CONFIG.ALL_CURRENCIES) {
+                    const result = await loadFlagImage(currency);
+                    
+                    stats.total++;
+                    if (result.success) {
+                        stats.success++;
+                    } else {
+                        stats.error++;
+                    }
+                    
+                    updateStats();
+                    
+                    const card = createFlagCard(
+                        result.currency, 
+                        result.success, 
+                        result.url
+                    );
+                    
+                    container.appendChild(card);
+                    
+                    // تأخير بسيط بين كل صورة
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }, 500);
+        }
+
+        // اختبار الصور الأساسية فقط
+        async function testSpecificFlags() {
+            const container = document.getElementById('flagsContainer');
+            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">⏳ جاري اختبار الصور الأساسية...</div>';
+            
+            stats = { total: 0, success: 0, error: 0 };
+            
+            setTimeout(async () => {
+                container.innerHTML = '';
+                
+                for (const currency of CONFIG.ESSENTIAL_FLAGS) {
+                    const result = await loadFlagImage(currency);
+                    
+                    stats.total++;
+                    if (result.success) {
+                        stats.success++;
+                    } else {
+                        stats.error++;
+                    }
+                    
+                    updateStats();
+                    
+                    const card = createFlagCard(
+                        result.currency, 
+                        result.success, 
+                        result.url
+                    );
+                    
+                    container.appendChild(card);
+                    
+                    // تأخير بسيط بين كل صورة
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }, 500);
+        }
+
+        // تهيئة الصفحة
+        function initPage() {
+            document.getElementById('baseUrl').textContent = CONFIG.BASE_URL;
+            stats = { total: CONFIG.ALL_CURRENCIES.length, success: 0, error: 0 };
+            updateStats();
+            
+            // تحميل الصور الأساسية تلقائياً
+            testSpecificFlags();
+        }
+
+        // بدء التطبيق عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</body>
+</html>
