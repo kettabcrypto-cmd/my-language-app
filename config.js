@@ -5,11 +5,11 @@ const CONFIG = {
     
     // Endpoints
     ENDPOINTS: {
-        TIME_SERIES: 'time_series', // نستخدم هذا Endpoint
+        TIME_SERIES: 'time_series',
         CURRENCY_EXCHANGE_RATE: 'currency_exchange_rate'
     },
     
-    // العملات المدعومة (أزواج العملات)
+    // العملات المدعومة
     CURRENCY_PAIRS: [
         'USD/EUR', 'USD/GBP', 'USD/JPY', 
         'USD/AED', 'USD/SAR', 'USD/QAR',
@@ -17,13 +17,13 @@ const CONFIG = {
     ],
     
     // إعدادات Time Series
-    INTERVAL: '1min', // أو '1h' للتحديث كل ساعة
+    INTERVAL: '5min', // تغيير إلى 5 دقائق للبيانات الأكثر استقراراً
     OUTPUT_SIZE: 1, // آخر سعر فقط
     
-    // تحديث كل دقيقة
-    UPDATE_INTERVAL: 60 * 1000, // 60 ثانية
+    // تحديث كل 30 دقيقة (بدلاً من 1 دقيقة)
+    UPDATE_INTERVAL: 30 * 60 * 1000, // 30 دقيقة = 1,800,000 مللي ثانية
     
-    // الصور (ابقى كما هو)
+    // الأعلام
     CURRENCY_FLAGS: {
         'USD': 'https://flagcdn.com/w40/us.png',
         'EUR': 'https://flagcdn.com/w40/eu.png',
@@ -31,6 +31,9 @@ const CONFIG = {
         'JPY': 'https://flagcdn.com/w40/jp.png',
         'AED': 'https://flagcdn.com/w40/ae.png',
         'SAR': 'https://flagcdn.com/w40/sa.png',
-        'QAR': 'https://flagcdn.com/w40/qa.png'
+        'QAR': 'https://flagcdn.com/w40/qa.png',
+        'CAD': 'https://flagcdn.com/w40/ca.png',
+        'AUD': 'https://flagcdn.com/w40/au.png',
+        'CHF': 'https://flagcdn.com/w40/ch.png'
     }
 };
