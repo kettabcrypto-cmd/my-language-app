@@ -1,268 +1,114 @@
-class CurrencyApp {
-    constructor() {
-        this.api = new CurrencyAPI();
-        this.currentRates = null;
-        this.activePage = 'ratesPage';
-        this.displayedCurrencies = ['EUR', 'GBP', 'JPY', 'AED', 'SAR', 'QAR', 'CAD', 'AUD'];
-    }
+const CONFIG = {
+    // API Configuration
+    API_KEY: 'b83fce53976843bbb59336c03f9a6a30',
+    API_BASE_URL: 'https://api.twelvedata.com',
     
-    async init() {
-        console.log('🚀 بدء تطبيق CurrencyPro');
-        this.setupNavigation();
-        await this.loadRates();
-        this.startAutoUpdate();
-    }
+    // Endpoints
+    ENDPOINTS: {
+        TIME_SERIES: 'time_series',
+        CURRENCY_EXCHANGE_RATE: 'currency_exchange_rate'
+    },
     
-    async loadRates() {
-        try {
-            this.currentRates = await this.api.getRealTimeRates();
-            this.updateRatesPage();
-        } catch (error) {
-            console.error('❌ خطأ في تحميل الأسعار:', error);
-            this.currentRates = this.api.getFallbackRates();
-            this.updateRatesPage();
-        }
-    }
+    // العملات المدعومة
+    CURRENCY_PAIRS: [
+        'USD/EUR', 'USD/GBP', 'USD/JPY', 
+        'USD/AED', 'USD/SAR', 'USD/QAR',
+        'USD/CAD', 'USD/AUD', 'USD/CHF',
+        'USD/TRY', 'USD/CNY', 'USD/BRL',
+        'USD/MXN', 'USD/ARS', 'USD/RUB',
+        'USD/ZAR', 'USD/KRW', 'USD/INR',
+        'USD/HKD', 'USD/MYR', 'USD/MAD',
+        'USD/EGP', 'USD/TND'
+    ],
     
-    // ========== صفحة الأسعار كبطاقات ==========
-    updateRatesPage() {
-        const ratesList = document.getElementById('ratesList');
-        if (!ratesList || !this.currentRates) return;
-        
-        ratesList.innerHTML = '';
-        
-        this.displayedCurrencies.forEach(currencyCode => {
-            const rate = this.currentRates.rates[currencyCode];
-            if (rate) {
-                const rateCard = this.createRateCard(currencyCode, rate);
-                ratesList.appendChild(rateCard);
-            }
-        });
-    }
+    // إعدادات Time Series
+    INTERVAL: '5min',
+    OUTPUT_SIZE: 1,
     
-    createRateCard(currencyCode, rate) {
-        const card = document.createElement('div');
-        card.className = 'rate-card';
-        
-        // الحصول على الصورة
-        const imageUrl = CONFIG.RATES_IMAGES[currencyCode];
-        const currencyName = CONFIG.CURRENCY_NAMES[currencyCode]?.ar || currencyCode;
-        
-        // تنسيق البطاقة
-        card.innerHTML = `
-            <div class="card-header">
-                <img src="${imageUrl}" alt="${currencyCode}" class="card-currency-icon">
-                <div class="card-currency-info">
-                    <h3 class="card-currency-code">${currencyCode}</h3>
-                    <p class="card-currency-name">${currencyName}</p>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="card-rate">
-                    <span class="card-rate-value">${rate.toFixed(4)}</span>
-                    <span class="card-rate-label">لكل دولار أمريكي</span>
-                </div>
-            </div>
-            <div class="card-footer">
-                <small>آخر تحديث: ${new Date().toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit'})}</small>
-            </div>
-        `;
-        
-        // حدث النقر للبطاقة
-        card.addEventListener('click', () => {
-            this.selectCurrencyForConverter(currencyCode);
-        });
-        
-        return card;
-    }
+    // تحديث كل 30 دقيقة
+    UPDATE_INTERVAL: 30 * 60 * 1000,
     
-    selectCurrencyForConverter(currencyCode) {
-        this.toCurrency = currencyCode;
-        this.updateConverter();
-        this.switchPage('convertPage');
-    }
+    // **أسماء العملات الكاملة**
+    CURRENCY_NAMES: {
+        'USD': { ar: 'دولار أمريكي', en: 'US Dollar' },
+        'EUR': { ar: 'يورو', en: 'Euro' },
+        'GBP': { ar: 'جنيه إسترليني', en: 'British Pound' },
+        'JPY': { ar: 'ين ياباني', en: 'Japanese Yen' },
+        'CHF': { ar: 'فرنك سويسري', en: 'Swiss Franc' },
+        'CAD': { ar: 'دولار كندي', en: 'Canadian Dollar' },
+        'AUD': { ar: 'دولار أسترالي', en: 'Australian Dollar' },
+        'AED': { ar: 'درهم إماراتي', en: 'UAE Dirham' },
+        'SAR': { ar: 'ريال سعودي', en: 'Saudi Riyal' },
+        'QAR': { ar: 'ريال قطري', en: 'Qatari Riyal' },
+        'TRY': { ar: 'ليرة تركية', en: 'Turkish Lira' },
+        'CNY': { ar: 'يوان صيني', en: 'Chinese Yuan' },
+        'BRL': { ar: 'ريال برازيلي', en: 'Brazilian Real' },
+        'MXN': { ar: 'بيزو مكسيكي', en: 'Mexican Peso' },
+        'ARS': { ar: 'بيزو أرجنتيني', en: 'Argentine Peso' },
+        'RUB': { ar: 'روبل روسي', en: 'Russian Ruble' },
+        'ZAR': { ar: 'راند جنوب أفريقي', en: 'South African Rand' },
+        'KRW': { ar: 'وون كوري جنوبي', en: 'South Korean Won' },
+        'INR': { ar: 'روبية هندية', en: 'Indian Rupee' },
+        'HKD': { ar: 'دولار هونغ كونغ', en: 'Hong Kong Dollar' },
+        'MYR': { ar: 'رينغيت ماليزي', en: 'Malaysian Ringgit' },
+        'MAD': { ar: 'درهم مغربي', en: 'Moroccan Dirham' },
+        'EGP': { ar: 'جنيه مصري', en: 'Egyptian Pound' },
+        'TND': { ar: 'دينار تونسي', en: 'Tunisian Dinar' }
+    },
     
-    // ========== إعداد التنقل ==========
-    setupNavigation() {
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetPage = item.getAttribute('data-page');
-                this.switchPage(targetPage);
-                
-                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                item.classList.add('active');
-                this.activePage = targetPage;
-            });
-        });
-    }
+    // **صور العملات للمحول (النوع الأول - بدون x)**
+    CONVERTER_IMAGES: {
+        'USD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/101-currency-usd.png',
+        'EUR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/100-currency-eur.png',
+        'GBP': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/102-currency-gbp.png',
+        'JPY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/113-currency-jpy.png',
+        'CHF': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/103-currency-chf.png',
+        'CAD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/104-currency-cad.png',
+        'AUD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/105-currency-aud.png',
+        'AED': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/123-currency-aed.png',
+        'SAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/121-currency-sar.png',
+        'QAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/122-currency-qar.png',
+        'TRY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/106-currency-try.png',
+        'CNY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/107-currency-cny.png',
+        'BRL': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/108-currency-brl.png',
+        'MXN': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/109-currency-mxn.png',
+        'ARS': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/110-currency-ars.png',
+        'RUB': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/111-currency-rub.png',
+        'ZAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/112-currency-zar.png',
+        'KRW': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/114-currency-krw.png',
+        'INR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/115-currency-inr.png',
+        'HKD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/116-currency-hkd.png',
+        'MYR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/117-currency-myr.png',
+        'MAD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/118-currency-mad.png',
+        'EGP': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/119-currency-egp.png',
+        'TND': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/120-currency-tnd.png'
+    },
     
-    switchPage(pageId) {
-        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-        const targetPage = document.getElementById(pageId);
-        if (targetPage) targetPage.classList.add('active');
+    // **صور العملات لقائمة الأسعار (النوع الثاني - مع x)**
+    RATES_IMAGES: {
+        'USD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/101-currency-usd.png',
+        'EUR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/100-currency-eurx.png',
+        'GBP': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/102-currency-gbpx.png',
+        'JPY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/105-currency-jpyx.png',
+        'CHF': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/103-currency-chfx.png',
+        'CAD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/101-currency-cadx.png',
+        'AUD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/104-currency-audx.png',
+        'AED': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/118-currency-aed.png',
+        'SAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/116-currency-sarx.png',
+        'QAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/117-currency-qarx.png',
+        'TRY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/109-currency-tryx.png',
+        'CNY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/110-currency-cnyx.png',
+        'BRL': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/107-currency-brlx.png',
+        'MXN': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/108-currency-mxnx.png',
+        'ARS': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/110-currency-ars.png',
+        'RUB': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/112-currency-rubx.png',
+        'ZAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/112-currency-zar.png',
+        'KRW': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/106-currency-krwx.png',
+        'INR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/115-currency-inr.png',
+        'HKD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/116-currency-hkd.png',
+        'MYR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/111-currency-myrx.png',
+        'MAD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/113-currency-madx.png',
+        'EGP': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/114-currency-egbx.png',
+        'TND': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/115-currency-tndx.png'
     }
-    
-    // ========== المحول ==========
-    updateConverter() {
-        if (!this.currentRates) return;
-        
-        // تحديث الأعلام في المحول
-        const fromFlag = document.getElementById('fromFlagImg');
-        const toFlag = document.getElementById('toFlagImg');
-        
-        if (fromFlag) {
-            fromFlag.src = CONFIG.CONVERTER_IMAGES[this.fromCurrency || 'USD'];
-            fromFlag.alt = this.fromCurrency || 'USD';
-        }
-        
-        if (toFlag) {
-            toFlag.src = CONFIG.CONVERTER_IMAGES[this.toCurrency || 'EUR'];
-            toFlag.alt = this.toCurrency || 'EUR';
-        }
-        
-        // تحديث الرموز
-        document.getElementById('fromCurrencyCode').textContent = this.fromCurrency || 'USD';
-        document.getElementById('toCurrencyCode').textContent = this.toCurrency || 'EUR';
-        
-        // تحديث سعر الصرف
-        this.updateExchangeRate();
-    }
-    
-    updateExchangeRate() {
-        const rateText = document.getElementById('rateText');
-        if (!rateText || !this.currentRates) return;
-        
-        const fromRate = this.currentRates.rates[this.fromCurrency || 'USD'] || 1;
-        const toRate = this.currentRates.rates[this.toCurrency || 'EUR'] || 1;
-        
-        if (fromRate && toRate) {
-            const exchangeRate = toRate / fromRate;
-            rateText.textContent = `1 ${this.fromCurrency || 'USD'} = ${exchangeRate.toFixed(4)} ${this.toCurrency || 'EUR'}`;
-        }
-    }
-    
-    // ========== التحديث التلقائي ==========
-    startAutoUpdate() {
-        setInterval(() => {
-            this.loadRates();
-        }, CONFIG.UPDATE_INTERVAL);
-    }
-}
-
-// بدء التطبيق
-document.addEventListener('DOMContentLoaded', () => {
-    const app = new CurrencyApp();
-    app.init();
-});
-
-// إضافة CSS للبطاقات
-const cardStyles = document.createElement('style');
-cardStyles.textContent = `
-    .rate-card {
-        background: white;
-        border-radius: 12px;
-        padding: 16px;
-        margin: 10px 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border: 1px solid #e0e0e0;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-    
-    .rate-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-        border-color: #3498db;
-    }
-    
-    .card-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 12px;
-    }
-    
-    .card-currency-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 8px;
-        margin-right: 12px;
-        object-fit: contain;
-        background: #f8f9fa;
-        padding: 5px;
-    }
-    
-    .card-currency-info {
-        flex: 1;
-    }
-    
-    .card-currency-code {
-        margin: 0;
-        font-size: 18px;
-        font-weight: bold;
-        color: #2c3e50;
-    }
-    
-    .card-currency-name {
-        margin: 2px 0 0;
-        font-size: 14px;
-        color: #7f8c8d;
-    }
-    
-    .card-body {
-        text-align: center;
-        padding: 10px 0;
-    }
-    
-    .card-rate {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .card-rate-value {
-        font-size: 28px;
-        font-weight: bold;
-        color: #27ae60;
-        line-height: 1.2;
-    }
-    
-    .card-rate-label {
-        font-size: 12px;
-        color: #95a5a6;
-        margin-top: 4px;
-    }
-    
-    .card-footer {
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid #eee;
-        text-align: center;
-    }
-    
-    .card-footer small {
-        font-size: 11px;
-        color: #bdc3c7;
-    }
-    
-    /* تحسين قائمة الأسعار */
-    #ratesList {
-        padding: 15px;
-    }
-    
-    /* تحسين العناوين */
-    .page-title {
-        text-align: center;
-        margin: 20px 0;
-        color: #2c3e50;
-        font-size: 24px;
-    }
-    
-    .section-title {
-        font-size: 18px;
-        color: #34495e;
-        margin: 15px 0;
-        padding-left: 15px;
-    }
-`;
-document.head.appendChild(cardStyles);
+};
