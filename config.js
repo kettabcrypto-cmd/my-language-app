@@ -28,6 +28,19 @@ const CONFIG = {
     // تحديث كل 30 دقيقة
     UPDATE_INTERVAL: 30 * 60 * 1000,
     
+    // **إعدادات التطبيق**
+    APP_SETTINGS: {
+        defaultTheme: 'light',
+        defaultFromCurrency: 'USD',
+        defaultToCurrency: 'EUR',
+        defaultAmount: 100,
+        autoUpdate: true,
+        updateInterval: 30 // دقائق
+    },
+    
+    // **العملات المتابعة افتراضياً**
+    DEFAULT_TRACKED_CURRENCIES: ['EUR', 'GBP', 'JPY', 'AED', 'SAR', 'QAR', 'CAD', 'AUD'],
+    
     // **أسماء العملات الكاملة**
     CURRENCY_NAMES: {
         'USD': { ar: 'دولار أمريكي', en: 'US Dollar' },
@@ -56,59 +69,99 @@ const CONFIG = {
         'TND': { ar: 'دينار تونسي', en: 'Tunisian Dinar' }
     },
     
-    // **صور العملات للمحول (النوع الأول - بدون x)**
+    // **روابط صور العملات للمحول (النوع الأول)**
     CONVERTER_IMAGES: {
-        'USD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/101-currency-usd.png',
-        'EUR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/100-currency-eur.png',
-        'GBP': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/102-currency-gbp.png',
-        'JPY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/113-currency-jpy.png',
-        'CHF': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/103-currency-chf.png',
-        'CAD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/104-currency-cad.png',
-        'AUD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/105-currency-aud.png',
-        'AED': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/123-currency-aed.png',
-        'SAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/121-currency-sar.png',
-        'QAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/122-currency-qar.png',
-        'TRY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/106-currency-try.png',
-        'CNY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/107-currency-cny.png',
-        'BRL': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/108-currency-brl.png',
-        'MXN': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/109-currency-mxn.png',
-        'ARS': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/110-currency-ars.png',
-        'RUB': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/111-currency-rub.png',
-        'ZAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/112-currency-zar.png',
-        'KRW': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/114-currency-krw.png',
-        'INR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/115-currency-inr.png',
-        'HKD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/116-currency-hkd.png',
-        'MYR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/117-currency-myr.png',
-        'MAD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/118-currency-mad.png',
-        'EGP': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/119-currency-egp.png',
-        'TND': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/120-currency-tnd.png'
+        'USD': '101-currency-usd.png',
+        'EUR': '100-currency-eur.png',
+        'GBP': '102-currency-gbp.png',
+        'JPY': '113-currency-jpy.png',
+        'CHF': '103-currency-chf.png',
+        'CAD': '104-currency-cad.png',
+        'AUD': '105-currency-aud.png',
+        'AED': '123-currency-aed.png',
+        'SAR': '121-currency-sar.png',
+        'QAR': '122-currency-qar.png',
+        'TRY': '106-currency-try.png',
+        'CNY': '107-currency-cny.png',
+        'BRL': '108-currency-brl.png',
+        'MXN': '109-currency-mxn.png',
+        'ARS': '110-currency-ars.png',
+        'RUB': '111-currency-rub.png',
+        'ZAR': '112-currency-zar.png',
+        'KRW': '114-currency-krw.png',
+        'INR': '115-currency-inr.png',
+        'HKD': '116-currency-hkd.png',
+        'MYR': '117-currency-myr.png',
+        'MAD': '118-currency-mad.png',
+        'EGP': '119-currency-egp.png',
+        'TND': '120-currency-tnd.png'
     },
     
-    // **صور العملات لقائمة الأسعار (النوع الثاني - مع x)**
+    // **روابط صور العملات لقائمة الأسعار (النوع الثاني)**
     RATES_IMAGES: {
-        'USD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/101-currency-usd.png',
-        'EUR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/100-currency-eurx.png',
-        'GBP': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/102-currency-gbpx.png',
-        'JPY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/105-currency-jpyx.png',
-        'CHF': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/103-currency-chfx.png',
-        'CAD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/101-currency-cadx.png',
-        'AUD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/104-currency-audx.png',
-        'AED': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/118-currency-aed.png',
-        'SAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/116-currency-sarx.png',
-        'QAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/117-currency-qarx.png',
-        'TRY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/109-currency-tryx.png',
-        'CNY': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/110-currency-cnyx.png',
-        'BRL': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/107-currency-brlx.png',
-        'MXN': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/108-currency-mxnx.png',
-        'ARS': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/110-currency-ars.png',
-        'RUB': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/112-currency-rubx.png',
-        'ZAR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/112-currency-zar.png',
-        'KRW': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/106-currency-krwx.png',
-        'INR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/115-currency-inr.png',
-        'HKD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/116-currency-hkd.png',
-        'MYR': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/111-currency-myrx.png',
-        'MAD': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/113-currency-madx.png',
-        'EGP': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/114-currency-egbx.png',
-        'TND': 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/115-currency-tndx.png'
+        'USD': '101-currency-usd.png',
+        'EUR': '100-currency-eurx.png',
+        'GBP': '102-currency-gbpx.png',
+        'JPY': '105-currency-jpyx.png',
+        'CHF': '103-currency-chfx.png',
+        'CAD': '101-currency-cadx.png',
+        'AUD': '104-currency-audx.png',
+        'AED': '118-currency-aed.png',
+        'SAR': '116-currency-sarx.png',
+        'QAR': '117-currency-qarx.png',
+        'TRY': '109-currency-tryx.png',
+        'CNY': '110-currency-cnyx.png',
+        'BRL': '107-currency-brlx.png',
+        'MXN': '108-currency-mxnx.png',
+        'ARS': '110-currency-ars.png',
+        'RUB': '112-currency-rubx.png',
+        'ZAR': '112-currency-zar.png',
+        'KRW': '106-currency-krwx.png',
+        'INR': '115-currency-inr.png',
+        'HKD': '116-currency-hkd.png',
+        'MYR': '111-currency-myrx.png',
+        'MAD': '113-currency-madx.png',
+        'EGP': '114-currency-egbx.png',
+        'TND': '115-currency-tndx.png'
+    },
+    
+    // **روابط قاعدة الصور**
+    IMAGE_BASE_URL: 'https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/',
+    
+    // **رموز الدول للأعلام البديلة**
+    COUNTRY_CODES: {
+        'USD': 'us', 'EUR': 'eu', 'GBP': 'gb', 'JPY': 'jp',
+        'CHF': 'ch', 'CAD': 'ca', 'AUD': 'au', 'AED': 'ae',
+        'SAR': 'sa', 'QAR': 'qa', 'TRY': 'tr', 'CNY': 'cn',
+        'BRL': 'br', 'MXN': 'mx', 'ARS': 'ar', 'RUB': 'ru',
+        'ZAR': 'za', 'KRW': 'kr', 'INR': 'in', 'HKD': 'hk',
+        'MYR': 'my', 'MAD': 'ma', 'EGP': 'eg', 'TND': 'tn'
+    },
+    
+    // **أسعار افتراضية للطوارئ**
+    DEFAULT_RATES: {
+        'EUR': 0.85404,
+        'GBP': 0.79000,
+        'JPY': 148.50,
+        'AED': 3.6725,
+        'SAR': 3.7500,
+        'QAR': 3.6400,
+        'CAD': 1.3500,
+        'AUD': 1.5600,
+        'CHF': 0.8800,
+        'TRY': 32.500,
+        'CNY': 7.1800,
+        'BRL': 5.2000,
+        'MXN': 17.800,
+        'ARS': 850.00,
+        'RUB': 92.500,
+        'ZAR': 19.200,
+        'KRW': 1350.00,
+        'INR': 83.500,
+        'HKD': 7.8200,
+        'MYR': 4.7500,
+        'MAD': 10.200,
+        'EGP': 30.900,
+        'TND': 3.1500
     }
 };
