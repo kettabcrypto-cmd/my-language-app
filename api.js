@@ -1,221 +1,261 @@
-// API Service for CurrencyPro
+// currency-api.js
 class CurrencyAPI {
     constructor() {
-        this.baseURL = CONFIG.API_URL;
-        this.apiKey = CONFIG.API_KEY;
+        // API Key الخاص بـ TwelveData - استخدم المفتاح الذي قدمته
+        this.apiKey = 'b83fce53976843bbb59336c03f9a6a30';
+        this.baseUrl = 'https://api.twelvedata.com';
+        
+        // العملات المدعومة (رموز TwelveData)
+        this.supportedCurrencies = [
+            'USD', 'EUR', 'GBP', 'JPY', 
+            'AED', 'SAR', 'QAR', 'MXN', 
+            'AUD', 'KRW'
+        ];
+        
+        // أزواج العملات الافتراضية مع USD كأساس
+        this.currencyPairs = [
+            'USD/EUR', 'USD/GBP', 'USD/JPY', 'USD/AED',
+            'USD/SAR', 'USD/QAR', 'USD/MXN', 'USD/AUD', 'USD/KRW'
+        ];
     }
-    
-    // Get all exchange rates from USD
-    async getAllExchangeRates() {
+
+    // جلب جميع أسعار العملات في طلب واحد
+    async fetchAllRates(baseCurrency = 'USD') {
         try {
-            console.log('Fetching exchange rates from API...');
+            console.log(`جاري جلب أسعار العملات باستخدام TwelveData API`);
             
-            // Check cache first
-            const cachedData = this.getCachedRates();
-            if (cachedData && this.isCacheValid(cachedData.timestamp)) {
-                console.log('Using cached rates');
-                return cachedData.rates;
+            // مع TwelveData، نحتاج لجلب كل زوج على حدة أو استخدام endpoint مختلف
+            // سنستخدم time_series endpoint مع interval=1min للحصول على آخر سعر
+            
+            const rates = {};
+            const baseRates = {};
+            
+            // جلب سعر USD كأساس (دائماً 1)
+            rates['USD'] = 1;
+            
+            // جلب الأسعار للعملات الأخرى مقابل USD
+            for (const currency of this.supportedCurrencies) {
+                if (currency === 'USD') continue;
+                
+                try {
+                    const rate = await this.fetchExchangeRate('USD', currency);
+                    if (rate) {
+                        rates[currency] = rate;
+                        baseRates[currency] = rate;
+                    }
+                } catch (error) {
+                    console.warn(`فشل جلب سعر ${currency}:`, error);
+                    // استخدام سعر افتراضي
+                    rates[currency] = this.getDefaultRate(currency);
+                }
             }
             
-            // Get currencies to fetch
-            const currenciesToFetch = this.getCurrenciesToFetch();
+            // إذا كانت العملة الأساسية ليست USD، نحتاج لإعادة حساب الأسعار
+            if (baseCurrency !== 'USD') {
+                return this.convertRatesToBase(baseCurrency, rates);
+            }
             
-            // Fetch all rates in parallel
-            const ratePromises = currenciesToFetch.map(currency => 
-                this.fetchExchangeRate('USD', currency)
-            );
-            
-            const results = await Promise.allSettled(ratePromises);
-            
-            // Process results
-            const rates = { USD: 1.0 };
-            
-            results.forEach((result, index) => {
-                const currency = currenciesToFetch[index];
-                if (result.status === 'fulfilled' && result.value) {
-                    rates[currency] = result.value;
-                } else {
-                    // Use default rate if API fails
-                    rates[currency] = this.getDefaultRate(currency);
-                    console.warn(`Using default rate for ${currency}`);
-                }
-            });
-            
-            // Cache the results
-            this.cacheRates(rates);
-            
-            // Update app state
-            AppState.exchangeRates = rates;
-            AppState.lastUpdate = new Date().toISOString();
-            saveAppState();
-            
-            console.log('Exchange rates updated successfully');
-            return rates;
+            return {
+                base: 'USD',
+                rates: rates,
+                timestamp: Math.floor(Date.now() / 1000),
+                nextUpdate: Math.floor(Date.now() / 1000) + 3600
+            };
             
         } catch (error) {
-            console.error('Error fetching exchange rates:', error);
+            console.error('خطأ في جلب أسعار العملات من TwelveData:', error);
             
-            // Try to use cached data
-            const cachedData = this.getCachedRates();
-            if (cachedData) {
-                return cachedData.rates;
-            }
-            
-            // Fall back to default rates
-            return this.getDefaultRates();
+            // إرجاع بيانات تجريبية في حالة فشل API
+            return this.getFallbackRates(baseCurrency);
         }
     }
-    
-    // Fetch single exchange rate
+
+    // جلب سعر صرف محدد
     async fetchExchangeRate(fromCurrency, toCurrency) {
         try {
-            const response = await fetch(
-                `${this.baseURL}?symbol=${fromCurrency}/${toCurrency}&apikey=${this.apiKey}`
-            );
+            // إذا كانت العملتان متطابقتان
+            if (fromCurrency === toCurrency) return 1;
+            
+            const symbol = `${fromCurrency}/${toCurrency}`;
+            const url = `${this.baseUrl}/exchange_rate?symbol=${symbol}&apikey=${this.apiKey}`;
+            
+            const response = await fetch(url);
             
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`);
+                throw new Error(`فشل جلب سعر الصرف: ${response.status}`);
             }
             
             const data = await response.json();
             
-            if (data.rate) {
-                return parseFloat(data.rate);
-            } else {
-                throw new Error('Invalid response format');
+            // التحقق من استجابة API
+            if (data.status === 'error') {
+                throw new Error(`خطأ في TwelveData API: ${data.message}`);
             }
             
+            return parseFloat(data.rate);
+            
         } catch (error) {
-            console.error(`Error fetching ${fromCurrency}/${toCurrency}:`, error);
+            console.error(`فشل جلب سعر الصرف ${fromCurrency}/${toCurrency}:`, error);
+            
+            // محاولة بديلة باستخدام endpoint مختلف
+            return await this.fetchTimeSeriesRate(fromCurrency, toCurrency);
+        }
+    }
+
+    // طريقة بديلة لجلب السعر باستخدام time_series
+    async fetchTimeSeriesRate(fromCurrency, toCurrency) {
+        try {
+            const symbol = `${fromCurrency}/${toCurrency}`;
+            const url = `${this.baseUrl}/time_series?symbol=${symbol}&interval=1min&apikey=${this.apiKey}&outputsize=1`;
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`فشل جلب time_series: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // التحقق من استجابة API
+            if (data.status === 'error') {
+                throw new Error(`خطأ في TwelveData API: ${data.message}`);
+            }
+            
+            // الحصول على آخر سعر مغلق
+            if (data.values && data.values.length > 0) {
+                return parseFloat(data.values[0].close);
+            }
+            
+            return null;
+            
+        } catch (error) {
+            console.error(`فشل جلب time_series rate ${fromCurrency}/${toCurrency}:`, error);
             return null;
         }
     }
-    
-    // Get currencies that need to be fetched
-    getCurrenciesToFetch() {
-        const allCurrencies = new Set();
-        
-        // Add tracked currencies
-        AppState.trackedCurrencies.forEach(currency => {
-            if (currency !== 'USD') allCurrencies.add(currency);
-        });
-        
-        // Add converter currencies
-        if (AppState.fromCurrency !== 'USD') allCurrencies.add(AppState.fromCurrency);
-        if (AppState.toCurrency !== 'USD') allCurrencies.add(AppState.toCurrency);
-        
-        // Add some popular currencies
-        ['EUR', 'GBP', 'JPY', 'AED', 'SAR'].forEach(currency => {
-            allCurrencies.add(currency);
-        });
-        
-        return Array.from(allCurrencies);
-    }
-    
-    // Get cached rates
-    getCachedRates() {
-        try {
-            const cached = localStorage.getItem('cachedRates');
-            if (cached) {
-                return JSON.parse(cached);
-            }
-        } catch (error) {
-            console.error('Error reading cache:', error);
-        }
-        return null;
-    }
-    
-    // Check if cache is valid
-    isCacheValid(timestamp) {
-        const now = Date.now();
-        const cacheAge = now - timestamp;
-        return cacheAge < CONFIG.CACHE_DURATION;
-    }
-    
-    // Cache rates
-    cacheRates(rates) {
-        try {
-            const cacheData = {
-                rates: rates,
-                timestamp: Date.now()
+
+    // تحويل الأسعار من USD إلى عملة أساسية أخرى
+    convertRatesToBase(newBaseCurrency, usdRates) {
+        if (!usdRates[newBaseCurrency]) {
+            console.warn(`لا يوجد سعر للعملة الأساسية ${newBaseCurrency}`);
+            return {
+                base: 'USD',
+                rates: usdRates,
+                timestamp: Math.floor(Date.now() / 1000),
+                nextUpdate: Math.floor(Date.now() / 1000) + 3600
             };
-            localStorage.setItem('cachedRates', JSON.stringify(cacheData));
-        } catch (error) {
-            console.error('Error caching rates:', error);
         }
-    }
-    
-    // Get default rates (fallback)
-    getDefaultRates() {
+        
+        const newBaseRate = usdRates[newBaseCurrency];
+        const newRates = {};
+        
+        // تحويل جميع الأسعار إلى العملة الأساسية الجديدة
+        for (const currency in usdRates) {
+            newRates[currency] = usdRates[currency] / newBaseRate;
+        }
+        
         return {
-            USD: 1.0,
-            EUR: 0.93,
-            GBP: 0.79,
-            JPY: 148.0,
-            CHF: 0.88,
-            CAD: 1.35,
-            AUD: 1.51,
-            CNY: 7.18,
-            AED: 3.67,
-            SAR: 3.75,
-            QAR: 3.64,
-            EGP: 30.9,
-            TRY: 28.5,
-            INR: 83.0,
-            RUB: 91.5,
-            BRL: 4.95,
-            ZAR: 18.7,
-            MXN: 17.2,
-            KRW: 1310.0,
-            HKD: 7.82,
-            MYR: 4.67,
-            MAD: 10.1,
-            TND: 3.11,
-            ARS: 350.0
+            base: newBaseCurrency,
+            rates: newRates,
+            timestamp: Math.floor(Date.now() / 1000),
+            nextUpdate: Math.floor(Date.now() / 1000) + 3600
         };
     }
-    
-    // Get default rate for single currency
+
+    // الأسعار الافتراضية للعملات (مقابل USD)
     getDefaultRate(currency) {
-        const defaults = this.getDefaultRates();
-        return defaults[currency] || 1.0;
-    }
-    
-    // Get image URL for currency
-    getImageUrl(currencyCode, type = 'converter') {
-        const imageMap = type === 'converter' ? CONFIG.CONVERTER_IMAGES : CONFIG.RATES_IMAGES;
-        const imageName = imageMap[currencyCode];
+        const defaultRates = {
+            'EUR': 0.9300,
+            'GBP': 0.7900,
+            'JPY': 148.0000,
+            'AED': 3.6700,
+            'SAR': 3.7500,
+            'QAR': 3.6400,
+            'MXN': 17.5000,
+            'AUD': 1.5600,
+            'KRW': 1330.0000
+        };
         
-        if (imageName) {
-            return CONFIG.IMAGE_BASE_URL + imageName;
+        return defaultRates[currency] || 1;
+    }
+
+    // بيانات تجريبية لاستخدامها عند فشل الاتصال بالإنترنت أو API
+    getFallbackRates(baseCurrency = 'USD') {
+        const fallbackRates = {
+            USD: 1.0000,
+            EUR: 0.9300,
+            GBP: 0.7900,
+            JPY: 148.0000,
+            AED: 3.6700,
+            SAR: 3.7500,
+            QAR: 3.6400,
+            MXN: 17.5000,
+            AUD: 1.5600,
+            KRW: 1330.0000
+        };
+        
+        // إذا كانت العملة الأساسية ليست USD، نقوم بتحويل الأسعار
+        if (baseCurrency !== 'USD' && fallbackRates[baseCurrency]) {
+            const baseRate = fallbackRates[baseCurrency];
+            const convertedRates = {};
+            
+            for (const currency in fallbackRates) {
+                convertedRates[currency] = fallbackRates[currency] / baseRate;
+            }
+            
+            return {
+                base: baseCurrency,
+                rates: convertedRates,
+                timestamp: Math.floor(Date.now() / 1000),
+                nextUpdate: Math.floor(Date.now() / 1000) + 3600
+            };
         }
         
-        // Fallback to USD image if not found
-        return CONFIG.IMAGE_BASE_URL + CONFIG.CONVERTER_IMAGES.USD;
+        return {
+            base: 'USD',
+            rates: fallbackRates,
+            timestamp: Math.floor(Date.now() / 1000),
+            nextUpdate: Math.floor(Date.now() / 1000) + 3600
+        };
     }
-    
-    // Convert amount
-    convertAmount(amount, fromCurrency, toCurrency) {
-        if (!AppState.exchangeRates) return 0;
+
+    // تحويل مبلغ بين عملتين
+    convert(amount, fromCurrency, toCurrency, rates) {
+        if (!rates || !rates[fromCurrency] || !rates[toCurrency]) {
+            console.error('أسعار العملات غير متوفرة للتحويل');
+            return 0;
+        }
         
-        const fromRate = AppState.exchangeRates[fromCurrency] || 1;
-        const toRate = AppState.exchangeRates[toCurrency] || 1;
-        
-        // Convert via USD
-        const amountInUSD = amount / fromRate;
-        return amountInUSD * toRate;
+        // التحويل باستخدام الأسعار بالنسبة للعملة الأساسية
+        if (rates.base === fromCurrency) {
+            // إذا كانت العملة المصدر هي الأساس
+            return amount * rates[toCurrency];
+        } else if (rates.base === toCurrency) {
+            // إذا كانت العملة الهدف هي الأساس
+            return amount / rates[fromCurrency];
+        } else {
+            // تحويل من العملة المصدر إلى الأساس ثم إلى العملة الهدف
+            const amountInBase = amount / rates[fromCurrency];
+            return amountInBase * rates[toCurrency];
+        }
     }
-    
-    // Get exchange rate between two currencies
-    getExchangeRate(fromCurrency, toCurrency) {
-        if (!AppState.exchangeRates) return 1;
+
+    // الحصول على سعر الصرف بين عملتين
+    getExchangeRate(fromCurrency, toCurrency, rates) {
+        if (fromCurrency === toCurrency) return 1;
         
-        const fromRate = AppState.exchangeRates[fromCurrency] || 1;
-        const toRate = AppState.exchangeRates[toCurrency] || 1;
+        if (!rates || !rates[fromCurrency] || !rates[toCurrency]) {
+            // استخدام البيانات الافتراضية
+            const fallback = this.getFallbackRates('USD');
+            return fallback.rates[toCurrency] / fallback.rates[fromCurrency];
+        }
         
-        return toRate / fromRate;
+        // حساب سعر الصرف باستخدام الأسعار بالنسبة للعملة الأساسية
+        return rates[toCurrency] / rates[fromCurrency];
     }
 }
 
-// Create API instance
-const currencyAPI = new CurrencyAPI();
+// تصدير الكلاس لاستخدامه في الملفات الأخرى
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = CurrencyAPI;
+}
