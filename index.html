@@ -1,198 +1,175 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CurrencyPro - Currency Converter</title>
+    <title>CurrencyPro - محول العملات</title>
+    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <!-- Top Navigation -->
-    <div class="header">
-        <div class="logo">
-            <i class="fas fa-globe-americas"></i>
-            CurrencyPro
-        </div>
-    </div>
-
-    <!-- Rates Page -->
-    <div class="page active" id="ratesPage">
-        <h1 class="page-title">Exchange Rates</h1>
-        
-        <div class="rates-section">
-            <div class="section-title">
-                <span>Currency Rates</span>
+    <div class="app-container">
+        <!-- شاشة محول العملات -->
+        <div id="converter-screen" class="screen active">
+            <h1>محول العملات</h1>
+            
+            <div class="currency-input">
+                <div class="currency-selector">
+                    <select id="from-currency" class="currency-dropdown">
+                        <option value="USD">USD - دولار أمريكي</option>
+                        <option value="EUR">EUR - يورو</option>
+                        <option value="GBP">GBP - جنيه إسترليني</option>
+                        <option value="JPY">JPY - ين ياباني</option>
+                        <option value="AED">AED - درهم إماراتي</option>
+                        <option value="SAR">SAR - ريال سعودي</option>
+                        <option value="QAR">QAR - ريال قطري</option>
+                        <option value="MXN">MXN - بيزو مكسيكي</option>
+                        <option value="AUD">AUD - دولار أسترالي</option>
+                        <option value="KRW">KRW - وون كوري جنوبي</option>
+                    </select>
+                    <input type="number" id="from-amount" value="100" min="0" step="0.01">
+                </div>
+                
+                <div class="swap-button">
+                    <button id="swap-currencies">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                </div>
+                
+                <div class="currency-selector">
+                    <select id="to-currency" class="currency-dropdown">
+                        <option value="AUD">AUD - دولار أسترالي</option>
+                        <option value="USD">USD - دولار أمريكي</option>
+                        <option value="EUR">EUR - يورو</option>
+                        <option value="GBP">GBP - جنيه إسترليني</option>
+                        <option value="JPY">JPY - ين ياباني</option>
+                        <option value="AED">AED - درهم إماراتي</option>
+                        <option value="SAR">SAR - ريال سعودي</option>
+                        <option value="QAR">QAR - ريال قطري</option>
+                        <option value="MXN">MXN - بيزو مكسيكي</option>
+                        <option value="KRW">KRW - وون كوري جنوبي</option>
+                    </select>
+                    <input type="number" id="to-amount" value="8.78" min="0" step="0.01" readonly>
+                </div>
             </div>
             
-            <div class="rates-list" id="ratesList">
-                <!-- Dynamic content -->
+            <div class="rate-info">
+                <p id="rate-display">1 MXN = 0.0878 AUD</p>
+                <p class="mid-market">يتم استخدام سعر السوق المتوسط</p>
             </div>
             
-            <div class="add-currency-section">
-                <button class="add-currency-btn" id="addCurrencyBtn">
-                    <i class="fas fa-plus"></i>
-                    Add Currency
+            <div class="bottom-nav">
+                <button class="nav-button" id="settings-btn">
+                    <i class="fas fa-cog"></i> الإعدادات
+                </button>
+                <button class="nav-button primary" id="convert-btn">
+                    <i class="fas fa-sync-alt"></i> تحويل
+                </button>
+                <button class="nav-button" id="rates-btn">
+                    <i class="fas fa-chart-line"></i> الأسعار
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- Converter Page -->
-    <div class="page" id="convertPage">
-        <h1 class="page-title">Currency Converter</h1>
         
-        <div class="converter">
-            <div class="converter-section">
-                <!-- From Currency -->
-                <div class="currency-row">
-                    <div class="currency-display">
-                        <div class="currency-flag" id="fromCurrencyImage">
-                            <img src="" alt="USD" id="fromFlagImg" onerror="this.style.display='none'">
-                        </div>
-                        <div class="currency-symbol" id="fromCurrencyCode">USD</div>
-                    </div>
-                    <button class="swap-icon-btn" id="changeFromCurrencyBtn">
-                        <i class="fas fa-exchange-alt"></i>
-                    </button>
-                </div>
-                
-                <input type="text" class="amount-input" id="fromAmount" value="100" inputmode="decimal">
-                
-                <!-- Mid Market Rate Display -->
-                <div class="mid-rate-display" id="midRateDisplay">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span id="rateText">1 USD = 0.8500 EUR</span>
-                </div>
-                
-                <!-- Swap Button -->
-                <div class="swap-container">
-                    <button class="swap-btn-large" id="swapCurrencies">
-                        <i class="fas fa-exchange-alt"></i>
-                    </button>
-                </div>
-                
-                <!-- To Currency -->
-                <div class="currency-row">
-                    <div class="currency-display">
-                        <div class="currency-flag" id="toCurrencyImage">
-                            <img src="" alt="EUR" id="toFlagImg" onerror="this.style.display='none'">
-                        </div>
-                        <div class="currency-symbol" id="toCurrencyCode">EUR</div>
-                    </div>
-                    <button class="swap-icon-btn" id="changeToCurrencyBtn">
-                        <i class="fas fa-exchange-alt"></i>
-                    </button>
-                </div>
-                
-                <input type="text" class="amount-input" id="toAmount" value="85.00" readonly>
-                
-                <!-- Mid-market rate info -->
-                <div class="mid-market-rate">
-                    <p>Mid-market rate used</p>
-                </div>
+        <!-- شاشة الأسعار -->
+        <div id="rates-screen" class="screen">
+            <div class="screen-header">
+                <button class="back-button">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                <h1>CurrencyPro</h1>
             </div>
-        </div>
-    </div>
-
-    <!-- Settings Page -->
-    <div class="page" id="settingsPage">
-        <h1 class="page-title">Settings</h1>
-        
-        <div class="settings-section">
-            <div class="settings-group">
-                <div class="group-title">Appearance</div>
+            
+            <div class="section">
+                <h2>أسعار الصرف</h2>
+                <p class="subtitle">أسعار العملات</p>
                 
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <h3>Dark Mode</h3>
-                        <p>Change app appearance</p>
-                    </div>
-                    <div class="theme-selector">
-                        <button class="theme-option active" data-theme="light">Light</button>
-                        <button class="theme-option" data-theme="dark">Dark</button>
-                    </div>
+                <div id="rates-list" class="rates-list">
+                    <!-- سيتم ملؤها ديناميكياً -->
+                </div>
+                
+                <div class="update-info">
+                    <p><i class="fas fa-clock"></i> آخر تحديث: <span id="last-update-time">10:46</span></p>
+                    <p id="last-update-status">الآن</p>
                 </div>
             </div>
             
-            <div class="settings-group">
-                <div class="group-title">Updates</div>
-                
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <h3>Auto Update</h3>
-                        <p>Updates every hour</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 13px; color: #28a745;">
-                            <i class="fas fa-check-circle"></i> Enabled
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <h3>Last Update</h3>
-                        <p>Exchange rates</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 14px; font-weight: 600;" id="lastUpdateTime">--:--</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);" id="lastUpdateStatus">
-                            Loading...
-                        </div>
-                    </div>
-                </div>
+            <div class="bottom-nav">
+                <button class="nav-button" id="converter-btn">
+                    <i class="fas fa-exchange-alt"></i> محول
+                </button>
+                <button class="nav-button" id="settings-btn-2">
+                    <i class="fas fa-cog"></i> الإعدادات
+                </button>
+            </div>
+        </div>
+        
+        <!-- شاشة الإعدادات -->
+        <div id="settings-screen" class="screen">
+            <div class="screen-header">
+                <button class="back-button">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                <h1>الإعدادات</h1>
             </div>
             
-            <div class="version-info">
-                <span>© 2023 CurrencyPro</span>
-                <span>All rights reserved</span>
+            <div class="section">
+                <h2>المظهر</h2>
+                
+                <div class="setting-item">
+                    <h3>الوضع الداكن</h3>
+                    <p>تغيير مظهر التطبيق</p>
+                    
+                    <div class="toggle-options">
+                        <button class="toggle-option" id="light-mode">فاتح</button>
+                        <button class="toggle-option active" id="dark-mode">داكن</button>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2>التحديثات</h2>
+                    
+                    <div class="setting-item">
+                        <div class="setting-header">
+                            <h3>التحديث التلقائي</h3>
+                            <label class="switch">
+                                <input type="checkbox" id="auto-update" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p>يتحديث كل ساعة <span class="enabled-badge">💷 مفعل</span></p>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <h3>آخر تحديث</h3>
+                        <p>أسعار الصرف</p>
+                        <div class="time-display">
+                            <span id="update-time">10:46</span>
+                            <span id="update-status">الآن</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>© 2023 CurrencyPro</p>
+                    <p>جميع الحقوق محفوظة</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Add Currency Modal -->
-    <div class="currency-select-modal" id="addCurrencyModal">
-        <div class="modal-content">
-            <div class="modal-header">Add Currency</div>
-            <div class="modal-body" id="availableCurrenciesList">
-                <!-- Dynamic content -->
-            </div>
-            <button class="close-modal-btn" id="closeModalBtn">Close</button>
-        </div>
+    <!-- ننشئ عناصر تحميل ورسائل -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>جاري تحديث الأسعار...</p>
     </div>
+    
+    <div id="message" class="message"></div>
 
-    <!-- Change Currency Modal -->
-    <div class="currency-select-modal" id="changeCurrencyModal">
-        <div class="modal-content">
-            <div class="modal-header" id="changeCurrencyTitle">Select Currency</div>
-            <div class="modal-body" id="changeCurrencyList">
-                <!-- Dynamic content -->
-            </div>
-            <button class="close-modal-btn" id="closeChangeModalBtn">Close</button>
-        </div>
-    </div>
-
-    <!-- Bottom Navigation -->
-    <div class="bottom-nav">
-        <a href="#" class="nav-item" data-page="settingsPage">
-            <i class="fas fa-cog"></i>
-            <span>Settings</span>
-        </a>
-        <a href="#" class="nav-item" data-page="convertPage">
-            <i class="fas fa-exchange-alt"></i>
-            <span>Convert</span>
-        </a>
-        <a href="#" class="nav-item active" data-page="ratesPage">
-            <i class="fas fa-chart-line"></i>
-            <span>Rates</span>
-        </a>
-    </div>
-
-    <!-- JavaScript Files -->
-    <script src="js/config.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/app.js"></script>
+    <!-- نستورد الملفات JavaScript -->
+    <script src="storage.js"></script>
+    <script src="currency-api.js"></script>
+    <script src="ui-manager.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
