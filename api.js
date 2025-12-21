@@ -1,170 +1,77 @@
-// api.js - API معدل ليعمل مع TwelveData
 class CurrencyAPI {
     constructor() {
         this.apiKey = CONFIG.API_KEY;
         this.baseUrl = CONFIG.API_BASE_URL;
-        this.cache = {};
-        this.lastFetch = null;
-        this.isFetching = false;
+        this.cache = null;
+        this.cacheDuration = CONFIG.UPDATE_INTERVAL;
+        this.rates = { USD: 1.0 };
     }
     
-    // الطريقة الرئيسية لجلب الأسعار
-    async getRealTimeRates() {
+    // الطريقة الرئيسية - جلب جميع الأسعار مرة واحدة
+    async fetchAllRates() {
         try {
-            console.log('🚀 جلب أسعار حقيقية من TwelveData...');
+            console.log('🚀 جلب أسعار العملات من TwelveData...');
             
-            // منع طلبات متعددة في نفس الوقت
-            if (this.isFetching) {
-                console.log('⏳ طلب قيد المعالجة، الانتظار...');
-                return this.cache.rates || this.getDefaultRates();
+            // التحقق من التخزين المؤقت
+            if (this.cache && (Date.now() - this.cache.timestamp < this.cacheDuration)) {
+                console.log('📦 استخدام البيانات المخزنة');
+                return this.cache;
             }
             
-            this.isFetching = true;
+            // جلب أسعار جميع أزواج العملات
+            await this.fetchMultipleRates();
             
-            // اختبار 1: استخدام currency_exchange_rate endpoint
-            let rates = await this.tryCurrencyExchangeEndpoint();
-            
-            // اختبار 2: إذا فشل الأول، استخدم exchange_rate
-            if (!rates.success) {
-                console.log('🔄 تجربة endpoint آخر...');
-                rates = await this.tryExchangeRateEndpoint();
-            }
-            
-            // اختبار 3: إذا فشل الاثنان، استخدم البيانات الافتراضية
-            if (!rates.success) {
-                console.log('⚠️ استخدام البيانات الافتراضية');
-                rates = this.getDefaultRates();
-            }
-            
-            // التخزين المؤقت
-            this.cache.rates = rates;
-            this.lastFetch = Date.now();
-            this.isFetching = false;
-            
-            console.log('✅ الأسعار المستلمة:', {
-                source: rates.source,
-                currencies: Object.keys(rates.rates).length,
-                sample: {
-                    EUR: rates.rates.EUR,
-                    GBP: rates.rates.GBP,
-                    JPY: rates.rates.JPY
-                }
-            });
-            
-            return rates;
-            
-        } catch (error) {
-            console.error('❌ خطأ في جلب الأسعار الحقيقية:', error);
-            this.isFetching = false;
-            return this.getDefaultRates();
-        }
-    }
-    
-    // الطريقة 1: استخدام currency_exchange_rate endpoint
-    async tryCurrencyExchangeEndpoint() {
-        try {
-            console.log('🔗 تجربة currency_exchange_rate endpoint...');
-            
-            // العملات المطلوبة
-            const currencies = ['EUR', 'GBP', 'JPY', 'AED', 'SAR', 'QAR', 'MXN', 'AUD', 'KRW'];
-            const rates = { USD: 1.0 };
-            
-            // جلب كل سعر على حدة (لكن يمكن تحسينه)
-            for (const currency of currencies) {
-                try {
-                    const rate = await this.fetchCurrencyExchangeRate('USD', currency);
-                    rates[currency] = rate;
-                    console.log(`✅ ${currency}: ${rate}`);
-                } catch (error) {
-                    console.warn(`⚠️ فشل جلب ${currency}:`, error.message);
-                    rates[currency] = this.getDefaultRate(currency);
-                }
-            }
-            
-            return {
+            const result = {
                 success: true,
-                rates: rates,
-                timestamp: new Date().toISOString(),
-                source: 'currency_exchange_endpoint'
+                rates: this.rates,
+                timestamp: Date.now(),
+                source: 'twelvedata_time_series'
             };
             
+            this.cache = result;
+            console.log('✅ تم جلب الأسعار بنجاح:', this.rates);
+            
+            return result;
+            
         } catch (error) {
-            console.error('❌ فشل currency_exchange_endpoint:', error);
-            return { success: false };
+            console.error('❌ خطأ في جلب الأسعار:', error);
+            return this.getFallbackRates();
         }
     }
     
-    // الطريقة 2: استخدام exchange_rate endpoint
-    async tryExchangeRateEndpoint() {
-        try {
-            console.log('🔗 تجربة exchange_rate endpoint...');
+    // جلب أسعار متعددة
+    async fetchMultipleRates() {
+        const promises = CONFIG.CURRENCY_PAIRS.map(pair => 
+            this.fetchCurrencyRate(pair)
+        );
+        
+        // جلب جميع الأسعار بالتوازي
+        const results = await Promise.allSettled(promises);
+        
+        results.forEach((result, index) => {
+            const pair = CONFIG.CURRENCY_PAIRS[index];
+            const targetCurrency = pair.split('/')[1]; // العملة الهدف
             
-            // إنشاء URL لعدة أزواج
-            const symbols = ['USD/EUR', 'USD/GBP', 'USD/JPY', 'USD/AED', 'USD/SAR', 'USD/QAR'].join(',');
-            const url = `${this.baseUrl}/exchange_rate?symbol=${symbols}&apikey=${this.apiKey}`;
-            
-            console.log('🌐 URL:', url);
-            
-            const response = await fetch(url);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+            if (result.status === 'fulfilled' && result.value !== null) {
+                this.rates[targetCurrency] = result.value;
+            } else {
+                console.warn(`⚠️ فشل جلب ${pair}، استخدام سعر افتراضي`);
+                this.rates[targetCurrency] = this.getDefaultRate(targetCurrency);
             }
-            
-            const data = await response.json();
-            console.log('📊 استجابة API:', data);
-            
-            // معالجة الاستجابة
-            const rates = { USD: 1.0 };
-            
-            if (data && typeof data === 'object') {
-                // TwelveData قد تعيد كائناً بسيطاً
-                if (data.rate) {
-                    // إذا كان سعر واحد فقط
-                    rates.EUR = parseFloat(data.rate);
-                } else {
-                    // البحث عن الأسعار في الاستجابة
-                    Object.keys(data).forEach(key => {
-                        if (key.includes('/')) {
-                            const targetCurrency = key.split('/')[1];
-                            const rateData = data[key];
-                            
-                            if (rateData && rateData.rate) {
-                                rates[targetCurrency] = parseFloat(rateData.rate);
-                            }
-                        }
-                    });
-                }
-            }
-            
-            // تعبئة العملات المفقودة
-            this.fillMissingRates(rates);
-            
-            return {
-                success: true,
-                rates: rates,
-                timestamp: new Date().toISOString(),
-                source: 'exchange_rate_endpoint'
-            };
-            
-        } catch (error) {
-            console.error('❌ فشل exchange_rate_endpoint:', error);
-            return { success: false };
-        }
+        });
     }
     
-    // جلب سعر صرف محدد
-    async fetchCurrencyExchangeRate(base, target) {
-        if (base === target) return 1.0;
-        
-        const url = `${this.baseUrl}/currency_exchange_rate?` +
-            `base=${base}&` +
-            `target=${target}&` +
-            `apikey=${this.apiKey}`;
-        
-        console.log(`🔗 جلب ${base}/${target}: ${url}`);
-        
+    // جلب سعر عملة واحدة
+    async fetchCurrencyRate(symbol) {
         try {
+            const url = `${this.baseUrl}/${CONFIG.ENDPOINTS.TIME_SERIES}?` +
+                `symbol=${symbol}&` +
+                `interval=${CONFIG.INTERVAL}&` +
+                `outputsize=${CONFIG.OUTPUT_SIZE}&` +
+                `apikey=${this.apiKey}`;
+            
+            console.log(`🔗 جلب ${symbol}:`, url);
+            
             const response = await fetch(url);
             
             if (!response.ok) {
@@ -177,117 +84,101 @@ class CurrencyAPI {
                 throw new Error(data.message || 'خطأ في API');
             }
             
-            if (data.rate) {
-                return parseFloat(data.rate);
+            if (data.values && data.values.length > 0) {
+                // استخدام سعر الإغلاق (close)
+                const closePrice = parseFloat(data.values[0].close);
+                console.log(`✅ ${symbol}: ${closePrice}`);
+                return closePrice;
             }
             
-            throw new Error('لا يوجد rate في الاستجابة');
+            throw new Error('لا توجد بيانات');
             
         } catch (error) {
-            console.error(`❌ فشل جلب ${base}/${target}:`, error);
-            throw error;
+            console.error(`❌ فشل جلب ${symbol}:`, error.message);
+            return null;
         }
     }
     
-    // تعبئة العملات المفقودة بالبيانات الافتراضية
-    fillMissingRates(rates) {
-        const requiredCurrencies = ['EUR', 'GBP', 'JPY', 'AED', 'SAR', 'QAR', 'MXN', 'AUD', 'KRW'];
-        const defaultRates = this.getDefaultRates().rates;
+    // جلب سعر محدد (للاستخدام المباشر)
+    async getExchangeRate(base, target) {
+        if (base === target) return 1.0;
         
-        requiredCurrencies.forEach(currency => {
-            if (!rates[currency] || rates[currency] === 1) {
-                rates[currency] = defaultRates[currency] || 1;
-                console.log(`📝 استخدام سعر افتراضي لـ ${currency}: ${rates[currency]}`);
+        try {
+            const symbol = `${base}/${target}`;
+            const rate = await this.fetchCurrencyRate(symbol);
+            
+            if (rate !== null) {
+                return rate;
             }
-        });
+            
+            return this.getDefaultRate(target);
+            
+        } catch (error) {
+            console.error(`❌ فشل جلب سعر ${base}/${target}:`, error);
+            return this.getDefaultRate(target);
+        }
     }
     
-    // سعر افتراضي لعملة معينة
+    // بيانات افتراضية للطوارئ
     getDefaultRate(currency) {
-        const defaultRates = this.getDefaultRates().rates;
+        const defaultRates = {
+            'EUR': 0.85404,
+            'GBP': 0.79000,
+            'JPY': 148.50,
+            'AED': 3.6725,
+            'SAR': 3.7500,
+            'QAR': 3.6400,
+            'CAD': 1.3500,
+            'AUD': 1.5600,
+            'CHF': 0.8800,
+            'CNY': 7.1800
+        };
         return defaultRates[currency] || 1.0;
     }
     
-    // البيانات الافتراضية
-    getDefaultRates() {
+    getFallbackRates() {
+        const rates = { USD: 1.0 };
+        
+        CONFIG.CURRENCY_PAIRS.forEach(pair => {
+            const targetCurrency = pair.split('/')[1];
+            rates[targetCurrency] = this.getDefaultRate(targetCurrency);
+        });
+        
         return {
             success: false,
-            rates: {
-                USD: 1.0000,
-                EUR: 0.9300,
-                GBP: 0.7900,
-                JPY: 148.0000,
-                CHF: 0.8800,
-                CAD: 1.3500,
-                AUD: 1.5600,
-                CNY: 7.1800,
-                AED: 3.6700,
-                SAR: 3.7500,
-                QAR: 3.6400,
-                EGP: 30.9000,
-                TRY: 28.5000,
-                INR: 83.0000,
-                RUB: 91.5000,
-                BRL: 4.9500,
-                ZAR: 18.7000,
-                MXN: 17.2000,
-                KRW: 1310.0000,
-                HKD: 7.8200,
-                MYR: 4.6700,
-                MAD: 10.1000,
-                TND: 3.1100,
-                ARS: 350.0000
-            },
-            timestamp: new Date().toISOString(),
-            source: 'default_fallback'
+            rates: rates,
+            timestamp: Date.now(),
+            source: 'fallback_data'
         };
     }
     
-    // واجهة متوافقة مع بقية التطبيق
-    async getRates() {
-        return this.getRealTimeRates();
+    // واجهة متوافقة
+    async getRealTimeRates() {
+        return this.fetchAllRates();
     }
     
-    // تحويل مبلغ
+    async getRates() {
+        return this.fetchAllRates();
+    }
+    
+    // تحويل المبالغ
     convertAmount(amount, fromCurrency, toCurrency, ratesData) {
         if (!ratesData || !ratesData.rates) {
-            console.warn('⚠️ لا توجد بيانات أسعار للتحويل');
-            return 0;
+            ratesData = { rates: this.rates };
         }
         
         const rates = ratesData.rates;
         
-        if (fromCurrency === toCurrency) {
-            return amount;
-        }
+        if (fromCurrency === toCurrency) return amount;
         
         if (!rates[fromCurrency] || !rates[toCurrency]) {
             console.warn(`⚠️ أسعار غير متوفرة: ${fromCurrency}/${toCurrency}`);
-            return 0;
+            return amount;
         }
         
         const amountInUSD = amount / rates[fromCurrency];
         const result = amountInUSD * rates[toCurrency];
         
         return parseFloat(result.toFixed(4));
-    }
-    
-    // الحصول على سعر الصرف
-    getExchangeRate(fromCurrency, toCurrency, ratesData) {
-        if (!ratesData || !ratesData.rates) {
-            return 1;
-        }
-        
-        const rates = ratesData.rates;
-        
-        if (fromCurrency === toCurrency) {
-            return 1.0;
-        }
-        
-        if (!rates[fromCurrency] || !rates[toCurrency]) {
-            return 1;
-        }
-        
-        return rates[toCurrency] / rates[fromCurrency];
     }
 }
