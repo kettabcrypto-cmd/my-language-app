@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CurrencyPro - Offline</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .offline-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .offline-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+        
+        .offline-title {
+            font-size: 32px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .offline-message {
+            font-size: 18px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            max-width: 400px;
+        }
+        
+        .offline-features {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            max-width: 400px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .feature-item i {
+            margin-right: 10px;
+            color: #4ade80;
+        }
+        
+        .retry-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .last-updated {
+            margin-top: 20px;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">
+            <i class="fas fa-wifi-slash"></i>
+        </div>
+        
+        <div class="offline-title">
+            You're Offline
+        </div>
+        
+        <div class="offline-message">
+            CurrencyPro requires an internet connection to fetch the latest exchange rates.
+        </div>
+        
+        <div class="offline-features">
+            <div class="feature-item">
+                <i class="fas fa-check-circle"></i>
+                <span>Previous rates are still available</span>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-check-circle"></i>
+                <span>Converter works with cached data</span>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-check-circle"></i>
+                <span>Settings are saved locally</span>
+            </div>
+        </div>
+        
+        <button class="retry-btn" id="retryBtn">
+            <i class="fas fa-sync-alt"></i>
+            Retry Connection
+        </button>
+        
+        <div class="last-updated" id="lastUpdated">
+            Last updated: <span id="lastUpdateTime">Loading...</span>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('retryBtn').addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
+            this.disabled = true;
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        });
+        
+        // عرض آخر تحديث للبيانات
+        document.addEventListener('DOMContentLoaded', function() {
+            const cachedData = localStorage.getItem('currencyProData');
+            if (cachedData) {
+                try {
+                    const data = JSON.parse(cachedData);
+                    if (data.exchangeRates && data.exchangeRates.timestamp) {
+                        const lastUpdate = new Date(data.exchangeRates.timestamp);
+                        document.getElementById('lastUpdateTime').textContent = 
+                            lastUpdate.toLocaleString();
+                    }
+                } catch (e) {
+                    console.error('Error parsing cached data:', e);
+                }
+            }
+            
+            // إخفاء التطبيق العادي
+            if (window.top !== window.self) {
+                document.body.style.display = 'none';
+            }
+        });
+        
+        // فحص الاتصال كل 5 ثواني
+        setInterval(() => {
+            if (navigator.onLine) {
+                window.location.href = 'index.html';
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
