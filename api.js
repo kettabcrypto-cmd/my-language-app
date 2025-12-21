@@ -1,177 +1,325 @@
-class CurrencyAPI {
-    constructor() {
-        this.apiKey = CONFIG.API_KEY;
+// api.js - TwelveData API Integration
+class TwelveDataAPI {
+    constructor(apiKey) {
+        this.apiKey = apiKey || CONFIG.API_KEY;
         this.baseUrl = CONFIG.API_BASE_URL;
-        this.cache = null;
-        this.cacheDuration = CONFIG.UPDATE_INTERVAL;
-        this.lastFetchTime = null;
+        this.cache = new Map();
+        this.cacheDuration = CONFIG.CACHE_DURATION;
     }
-    
-    // جلب جميع الأسعار مرة واحدة
-    async fetchAllRates() {
-        try {
-            console.log('🚀 جلب أسعار العملات من TwelveData...');
-            
-            // التحقق من التخزين المؤقت
-            if (this.cache && this.lastFetchTime && 
-                (Date.now() - this.lastFetchTime < this.cacheDuration)) {
-                console.log('📦 استخدام البيانات المخزنة');
-                return this.cache;
-            }
-            
-            // جلب أسعار جميع أزواج العملات
-            const rates = await this.fetchMultipleRates();
-            
-            const result = {
-                success: true,
-                rates: rates,
-                timestamp: Date.now(),
-                source: 'twelvedata_api'
-            };
-            
-            this.cache = result;
-            this.lastFetchTime = Date.now();
-            
-            console.log('✅ تم جلب الأسعار بنجاح:', rates);
-            return result;
-            
-        } catch (error) {
-            console.error('❌ خطأ في جلب الأسعار:', error);
-            return this.getFallbackRates();
+
+    /**
+     * جلب سعر صرف زوج عملات
+     */
+    async getExchangeRate(symbol, baseCurrency = 'USD') {
+        const cacheKey = `rate_${symbol}_${baseCurrency}`;
+        const cached = this.getCachedData(cacheKey);
+        
+        if (cached) {
+            console.log(`Using cached rate for ${symbol}/${baseCurrency}`);
+            return cached;
         }
-    }
-    
-    // جلب أسعار متعددة
-    async fetchMultipleRates() {
-        const rates = { USD: 1.0 };
-        const promises = [];
-        
-        CONFIG.CURRENCY_PAIRS.forEach(pair => {
-            promises.push(
-                this.fetchCurrencyRate(pair).then(rate => {
-                    if (rate !== null) {
-                        const targetCurrency = pair.split('/')[1];
-                        rates[targetCurrency] = rate;
-                    }
-                })
-            );
-        });
-        
-        await Promise.allSettled(promises);
-        
-        // ملء أي عملات فاشلة بالأسعار الافتراضية
-        CONFIG.CURRENCY_PAIRS.forEach(pair => {
-            const targetCurrency = pair.split('/')[1];
-            if (!rates[targetCurrency]) {
-                rates[targetCurrency] = CONFIG.DEFAULT_RATES[targetCurrency] || 1.0;
-            }
-        });
-        
-        return rates;
-    }
-    
-    // جلب سعر عملة واحدة
-    async fetchCurrencyRate(symbol) {
+
         try {
-            const url = `${this.baseUrl}/${CONFIG.ENDPOINTS.TIME_SERIES}?` +
-                `symbol=${symbol}&` +
-                `interval=${CONFIG.INTERVAL}&` +
-                `outputsize=${CONFIG.OUTPUT_SIZE}&` +
-                `apikey=${this.apiKey}`;
+            // TwelveData uses format like "USD/EUR"
+            const pair = `${baseCurrency}/${symbol}`;
             
-            const response = await fetch(url, {
-                timeout: 10000 // 10 ثواني timeout
-            });
+            const response = await fetch(
+                `${this.baseUrl}/exchange_rate?symbol=${pair}&apikey=${this.apiKey}`
+            );
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             
             const data = await response.json();
             
             if (data.status === 'error') {
-                throw new Error(data.message || 'خطأ في API');
+                throw new Error(data.message || 'API Error');
             }
             
-            if (data.values && data.values.length > 0) {
-                const closePrice = parseFloat(data.values[0].close);
-                return closePrice;
-            }
+            // تنسيق البيانات
+            const result = {
+                pair: data.symbol,
+                rate: parseFloat(data.rate),
+                timestamp: new Date(data.timestamp * 1000),
+                base: baseCurrency,
+                target: symbol,
+                bid: data.bid,
+                ask: data.ask
+            };
             
-            throw new Error('لا توجد بيانات');
+            // تخزين في الكاش
+            this.setCachedData(cacheKey, result);
+            
+            return result;
             
         } catch (error) {
-            console.error(`❌ فشل جلب ${symbol}:`, error.message);
+            console.error('Error fetching exchange rate:', error);
+            
+            // Fallback: استخدام بيانات افتراضية
+            return this.getFallbackRate(symbol, baseCurrency);
+        }
+    }
+
+    /**
+     * جلب أسعار متعددة مرة واحدة
+     */
+    async getMultipleRates(symbols, baseCurrency = 'USD') {
+        try {
+            const promises = symbols.map(symbol => 
+                this.getExchangeRate(symbol, baseCurrency)
+            );
+            
+            const results = await Promise.all(promises);
+            const rates = {};
+            
+            results.forEach(result => {
+                if (result) {
+                    rates[result.target] = result.rate;
+                }
+            });
+            
+            return rates;
+            
+        } catch (error) {
+            console.error('Error fetching multiple rates:', error);
+            return {};
+        }
+    }
+
+    /**
+     * جلب بيانات تاريخية
+     */
+    async getHistoricalData(symbol, interval = '1day', outputsize = 30) {
+        const cacheKey = `history_${symbol}_${interval}_${outputsize}`;
+        const cached = this.getCachedData(cacheKey);
+        
+        if (cached) {
+            return cached;
+        }
+
+        try {
+            const response = await fetch(
+                `${this.baseUrl}/time_series?symbol=${symbol}&interval=${interval}&outputsize=${outputsize}&apikey=${this.apiKey}`
+            );
+            
+            const data = await response.json();
+            
+            if (data.status === 'error') {
+                throw new Error(data.message);
+            }
+            
+            const result = {
+                symbol: symbol,
+                interval: interval,
+                data: data.values || [],
+                meta: data.meta
+            };
+            
+            this.setCachedData(cacheKey, result, 60 * 60 * 1000); // تخزين لمدة ساعة
+            
+            return result;
+            
+        } catch (error) {
+            console.error('Error fetching historical data:', error);
+            return { symbol, interval, data: [] };
+        }
+    }
+
+    /**
+     * جلب بيانات سريعة (Quote)
+     */
+    async getQuote(symbol) {
+        try {
+            const response = await fetch(
+                `${this.baseUrl}/quote?symbol=${symbol}&apikey=${this.apiKey}`
+            );
+            
+            const data = await response.json();
+            
+            return {
+                symbol: symbol,
+                price: parseFloat(data.close),
+                change: parseFloat(data.percent_change),
+                high: parseFloat(data.high),
+                low: parseFloat(data.low),
+                volume: data.volume,
+                timestamp: new Date(data.datetime)
+            };
+            
+        } catch (error) {
+            console.error('Error fetching quote:', error);
             return null;
         }
     }
-    
-    // بيانات افتراضية للطوارئ
-    getFallbackRates() {
-        const rates = { USD: 1.0, ...CONFIG.DEFAULT_RATES };
-        
-        return {
-            success: false,
-            rates: rates,
-            timestamp: Date.now(),
-            source: 'fallback_data'
-        };
-    }
-    
-    // جلب سعر محدد
-    async getExchangeRate(base, target) {
-        if (base === target) return 1.0;
-        
+
+    /**
+     * جلب قائمة أزواج العملات المتاحة
+     */
+    async getAvailablePairs() {
         try {
-            const symbol = `${base}/${target}`;
-            const rate = await this.fetchCurrencyRate(symbol);
+            const response = await fetch(
+                `${this.baseUrl}/currency_pairs?apikey=${this.apiKey}`
+            );
             
-            if (rate !== null) {
-                return rate;
+            const data = await response.json();
+            
+            if (data.data) {
+                return data.data.map(pair => ({
+                    symbol: pair.symbol,
+                    base: pair.currency_base,
+                    quote: pair.currency_quote,
+                    name: pair.name
+                }));
             }
             
-            return CONFIG.DEFAULT_RATES[target] || 1.0;
+            return [];
             
         } catch (error) {
-            console.error(`❌ فشل جلب سعر ${base}/${target}:`, error);
-            return CONFIG.DEFAULT_RATES[target] || 1.0;
+            console.error('Error fetching currency pairs:', error);
+            
+            // Fallback: استخدام القائمة الافتراضية
+            return CONFIG.POPULAR_CURRENCIES.map(currency => ({
+                symbol: `USD/${currency}`,
+                base: 'USD',
+                quote: currency,
+                name: `${CONFIG.CURRENCY_NAMES[currency] || currency} مقابل الدولار`
+            }));
         }
     }
-    
-    // واجهة متوافقة للتطبيق
-    async getRealTimeRates() {
-        return this.fetchAllRates();
+
+    /**
+     * التحقق من حالة API
+     */
+    async checkAPIStatus() {
+        try {
+            const response = await fetch(
+                `${this.baseUrl}/exchange_rate?symbol=USD/EUR&apikey=${this.apiKey}`
+            );
+            
+            const data = await response.json();
+            
+            return {
+                status: data.status !== 'error',
+                message: data.status === 'error' ? data.message : 'API working',
+                credits: data.credits
+            };
+            
+        } catch (error) {
+            return {
+                status: false,
+                message: error.message,
+                credits: 0
+            };
+        }
     }
-    
-    async getRates() {
-        return this.fetchAllRates();
+
+    /**
+     * جلب بيانات افتراضية عند فشل API
+     */
+    getFallbackRate(symbol, baseCurrency) {
+        // بيانات افتراضية للاختبار
+        const fallbackRates = {
+            'USD': 1,
+            'EUR': 0.92,
+            'GBP': 0.79,
+            'JPY': 149.5,
+            'AED': 3.67,
+            'SAR': 3.75,
+            'EGP': 30.9,
+            'CAD': 1.35,
+            'AUD': 1.52,
+            'CHF': 0.88
+        };
+        
+        const baseRate = fallbackRates[baseCurrency] || 1;
+        const targetRate = fallbackRates[symbol] || 1;
+        const rate = targetRate / baseRate;
+        
+        return {
+            pair: `${baseCurrency}/${symbol}`,
+            rate: rate,
+            timestamp: new Date(),
+            base: baseCurrency,
+            target: symbol,
+            bid: rate * 0.999,
+            ask: rate * 1.001
+        };
     }
-    
-    // تحويل المبلغ
-    convertAmount(amount, fromCurrency, toCurrency, ratesData = null) {
-        if (!ratesData) {
-            ratesData = this.cache || this.getFallbackRates();
+
+    /**
+     * جلب بيانات من الكاش
+     */
+    getCachedData(key) {
+        const item = this.cache.get(key);
+        
+        if (item && Date.now() - item.timestamp < this.cacheDuration) {
+            return item.data;
         }
         
-        const rates = ratesData.rates;
-        
-        if (fromCurrency === toCurrency) return parseFloat(amount);
-        
-        if (!rates[fromCurrency] || !rates[toCurrency]) {
-            console.warn(`⚠️ أسعار غير متوفرة: ${fromCurrency}/${toCurrency}`);
-            return parseFloat(amount);
+        // إزالة البيانات المنتهية
+        if (item) {
+            this.cache.delete(key);
         }
         
-        const amountInUSD = amount / rates[fromCurrency];
-        const result = amountInUSD * rates[toCurrency];
+        return null;
+    }
+
+    /**
+     * تخزين بيانات في الكاش
+     */
+    setCachedData(key, data, duration = null) {
+        this.cache.set(key, {
+            data: data,
+            timestamp: Date.now(),
+            duration: duration || this.cacheDuration
+        });
         
-        return parseFloat(result.toFixed(4));
+        // تنظيف الكاش القديم تلقائياً
+        this.cleanCache();
     }
-    
-    // تحديث الأسعار يدوياً
-    async forceRefresh() {
-        this.cache = null;
-        this.lastFetchTime = null;
-        return this.fetchAllRates();
+
+    /**
+     * تنظيف الكاش
+     */
+    cleanCache() {
+        const now = Date.now();
+        
+        for (const [key, item] of this.cache.entries()) {
+            if (now - item.timestamp > item.duration) {
+                this.cache.delete(key);
+            }
+        }
     }
+
+    /**
+     * مسح الكاش بالكامل
+     */
+    clearCache() {
+        this.cache.clear();
+    }
+
+    /**
+     * تحديث جميع البيانات
+     */
+    async refreshAllData() {
+        console.log('Refreshing all data from API...');
+        this.clearCache();
+        
+        // يمكن إضافة منطق تحديث إضافي هنا
+        return true;
+    }
+}
+
+// إنشاء مثيل API للاستخدام العام
+const CurrencyAPI = new TwelveDataAPI(CONFIG.API_KEY);
+
+// اختبار الاتصال عند التحميل
+CurrencyAPI.checkAPIStatus().then(status => {
+    console.log('API Status:', status);
+});
+
+// Export for use in other files
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { TwelveDataAPI, CurrencyAPI };
 }
