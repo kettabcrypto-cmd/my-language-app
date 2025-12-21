@@ -12,10 +12,15 @@ class CurrencyApp {
     async init() {
         console.log('🚀 بدء CurrencyApp...');
         
-        // إخفاء رسالة التحميل الافتراضية
+        // التحقق من وجود العناصر
+        if (!this.checkElements()) {
+            return;
+        }
+        
+        // إخفاء رسالة التحميل
         this.hideLoadingMessage();
         
-        // إعداد جميع الأحداث
+        // إعداد الأحداث
         this.setupNavigation();
         this.setupConverter();
         this.setupSettings();
@@ -24,16 +29,21 @@ class CurrencyApp {
         // تحميل الأسعار
         await this.loadRates();
         
-        // تحديث كل 30 دقيقة
-        this.startAutoUpdate();
-        
         console.log('✅ التطبيق جاهز');
+    }
+    
+    checkElements() {
+        const ratesList = document.getElementById('ratesList');
+        if (!ratesList) {
+            console.error('❌ العنصر #ratesList غير موجود في HTML');
+            return false;
+        }
+        return true;
     }
     
     hideLoadingMessage() {
         const ratesList = document.getElementById('ratesList');
         if (ratesList) {
-            // إزالة عنصر التحميل الافتراضي
             ratesList.innerHTML = '';
         }
     }
@@ -48,23 +58,28 @@ class CurrencyApp {
                 this.updateRatesPage();
                 this.updateConverter();
                 this.updateSettings();
+                console.log('✅ الأسعار محملة بنجاح');
                 return true;
+            } else {
+                throw new Error('لا توجد بيانات في الاستجابة');
             }
             
         } catch (error) {
             console.error('❌ خطأ في تحميل الأسعار:', error);
-            this.showError('فشل تحميل الأسعار الحية. استخدام بيانات افتراضية.');
+            this.showMessage('⚠️ استخدام بيانات افتراضية', 'warning');
             this.currentRates = this.api.getFallbackRates();
             this.updateRatesPage();
+            return false;
         }
-        
-        return false;
     }
     
     // ========== صفحة الأسعار ==========
     updateRatesPage() {
         const ratesList = document.getElementById('ratesList');
-        if (!ratesList || !this.currentRates) return;
+        if (!ratesList || !this.currentRates) {
+            console.error('❌ لا يمكن تحديث الصفحة: ratesList أو currentRates غير موجود');
+            return;
+        }
         
         ratesList.innerHTML = '';
         
@@ -75,6 +90,8 @@ class CurrencyApp {
                 ratesList.appendChild(rateItem);
             }
         });
+        
+        console.log(`✅ تم عرض ${this.displayedCurrencies.length} عملة`);
     }
     
     createRateItem(currencyCode, rate) {
@@ -82,16 +99,16 @@ class CurrencyApp {
         item.className = 'rate-item';
         item.dataset.currency = currencyCode;
         
-        // اسم الصورة من الملفات التي أعطيتني إياها
+        // اسم الصورة
         const imageFile = this.getCurrencyImageFile(currencyCode);
         const imageUrl = `https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/${imageFile}`;
         
-        // اسم العملة بالعربية
+        // اسم العملة
         const currencyName = CONFIG.CURRENCY_NAMES?.[currencyCode]?.ar || currencyCode;
         
         item.innerHTML = `
             <img src="${imageUrl}" alt="${currencyCode}" class="currency-image"
-                 onerror="this.onerror=null; this.src='https://flagcdn.com/w40/${this.getCountryCode(currencyCode)}.png'">
+                 onerror="this.src='https://flagcdn.com/w40/${this.getCountryCode(currencyCode)}.png'">
             <div class="rate-info">
                 <div class="rate-header">
                     <div class="currency-name">${currencyCode}</div>
@@ -103,7 +120,7 @@ class CurrencyApp {
             </div>
         `;
         
-        // حدث النقر: الانتقال للمحول
+        // حدث النقر للانتقال للمحول
         item.addEventListener('click', () => {
             this.toCurrency = currencyCode;
             this.updateConverter();
@@ -163,42 +180,37 @@ class CurrencyApp {
                 const targetPage = item.getAttribute('data-page');
                 this.switchPage(targetPage);
                 
-                // تحديث التنشيط
                 navItems.forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
                 
                 this.activePage = targetPage;
             });
         });
+        
+        console.log('✅ التنقل معتمد');
     }
     
     switchPage(pageId) {
-        // إخفاء جميع الصفحات
         document.querySelectorAll('.page').forEach(page => {
             page.classList.remove('active');
         });
         
-        // إظهار الصفحة المطلوبة
         const targetPage = document.getElementById(pageId);
         if (targetPage) {
             targetPage.classList.add('active');
-            
-            // إذا كانت صفحة الأسعار، تحديثها
-            if (pageId === 'ratesPage') {
-                this.updateRatesPage();
-            }
         }
     }
     
     // ========== المحول ==========
     setupConverter() {
-        // زر تبديل العملات
         const swapBtn = document.getElementById('swapCurrencies');
         if (swapBtn) {
-            swapBtn.addEventListener('click', () => this.swapCurrencies());
+            swapBtn.addEventListener('click', () => {
+                console.log('🔄 تبديل العملات');
+                this.swapCurrencies();
+            });
         }
         
-        // أزرار تغيير العملات
         const changeFromBtn = document.getElementById('changeFromCurrencyBtn');
         const changeToBtn = document.getElementById('changeToCurrencyBtn');
         
@@ -210,25 +222,23 @@ class CurrencyApp {
             changeToBtn.addEventListener('click', () => this.openCurrencyModal('to'));
         }
         
-        // إدخال المبلغ
         const fromAmount = document.getElementById('fromAmount');
         if (fromAmount) {
             fromAmount.addEventListener('input', () => this.updateConversion());
         }
+        
+        console.log('✅ المحول معتمد');
     }
     
     updateConverter() {
         if (!this.currentRates) return;
         
-        // تحديث الأعلام
         this.updateCurrencyFlag('from', this.fromCurrency);
         this.updateCurrencyFlag('to', this.toCurrency);
         
-        // تحديث الرموز
         document.getElementById('fromCurrencyCode').textContent = this.fromCurrency;
         document.getElementById('toCurrencyCode').textContent = this.toCurrency;
         
-        // تحديث سعر الصرف والتحويل
         this.updateExchangeRate();
         this.updateConversion();
     }
@@ -237,7 +247,6 @@ class CurrencyApp {
         const flagElement = document.getElementById(`${type}FlagImg`);
         if (!flagElement) return;
         
-        // صورة المحول (بدون x)
         const imageFile = this.getConverterImageFile(currencyCode);
         const imageUrl = `https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/${imageFile}`;
         
@@ -310,14 +319,12 @@ class CurrencyApp {
     }
     
     swapCurrencies() {
-        // تبديل العملات
         [this.fromCurrency, this.toCurrency] = [this.toCurrency, this.fromCurrency];
         this.updateConverter();
     }
     
     // ========== الإعدادات ==========
     setupSettings() {
-        // تبديل الثيم
         const themeOptions = document.querySelectorAll('.theme-option');
         themeOptions.forEach(option => {
             option.addEventListener('click', () => {
@@ -327,10 +334,11 @@ class CurrencyApp {
             });
         });
         
-        // تحميل الثيم المحفوظ
         const savedTheme = localStorage.getItem('currencypro-theme') || 'light';
         this.setTheme(savedTheme);
         document.querySelector(`.theme-option[data-theme="${savedTheme}"]`)?.classList.add('active');
+        
+        console.log('✅ الإعدادات معتمدة');
     }
     
     setTheme(theme) {
@@ -359,13 +367,11 @@ class CurrencyApp {
     
     // ========== المودالات ==========
     setupModals() {
-        // زر إضافة عملة
         const addBtn = document.getElementById('addCurrencyBtn');
         if (addBtn) {
             addBtn.addEventListener('click', () => this.showAddCurrencyModal());
         }
         
-        // أزرار إغلاق المودالات
         document.getElementById('closeModalBtn')?.addEventListener('click', () => {
             document.getElementById('addCurrencyModal').style.display = 'none';
         });
@@ -374,7 +380,6 @@ class CurrencyApp {
             document.getElementById('changeCurrencyModal').style.display = 'none';
         });
         
-        // إغلاق عند النقر خارج المودال
         window.addEventListener('click', (e) => {
             if (e.target.id === 'addCurrencyModal') {
                 document.getElementById('addCurrencyModal').style.display = 'none';
@@ -383,122 +388,81 @@ class CurrencyApp {
                 document.getElementById('changeCurrencyModal').style.display = 'none';
             }
         });
+        
+        console.log('✅ المودالات معتمدة');
     }
     
     showAddCurrencyModal() {
-        const modal = document.getElementById('addCurrencyModal');
-        const list = document.getElementById('availableCurrenciesList');
-        
-        if (!modal || !list || !this.currentRates) return;
-        
-        list.innerHTML = '';
-        
-        // عرض العملات غير المعروضة
-        Object.keys(this.currentRates.rates).forEach(currencyCode => {
-            if (currencyCode === 'USD' || this.displayedCurrencies.includes(currencyCode)) return;
-            
-            const option = document.createElement('div');
-            option.className = 'currency-option';
-            
-            const imageFile = this.getCurrencyImageFile(currencyCode);
-            const imageUrl = `https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/${imageFile}`;
-            const currencyName = CONFIG.CURRENCY_NAMES?.[currencyCode]?.ar || currencyCode;
-            const rate = this.currentRates.rates[currencyCode];
-            
-            option.innerHTML = `
-                <img src="${imageUrl}" alt="${currencyCode}"
-                     onerror="this.src='https://flagcdn.com/w40/${this.getCountryCode(currencyCode)}.png'">
-                <span>${currencyCode} - ${currencyName}</span>
-                <span class="currency-rate">${rate.toFixed(4)}</span>
-                <button class="add-btn-small">إضافة</button>
-            `;
-            
-            option.querySelector('.add-btn-small').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.addCurrencyToDisplay(currencyCode);
-                modal.style.display = 'none';
-            });
-            
-            list.appendChild(option);
-        });
-        
-        modal.style.display = 'flex';
-    }
-    
-    addCurrencyToDisplay(currencyCode) {
-        if (!this.displayedCurrencies.includes(currencyCode)) {
-            this.displayedCurrencies.push(currencyCode);
-            this.updateRatesPage();
-        }
+        alert('ميزة إضافة عملة - قيد التطوير');
+        // يمكنك تفعيل الكود الحقيقي عندما تعمل الأساسيات
     }
     
     openCurrencyModal(type) {
-        const modal = document.getElementById('changeCurrencyModal');
-        const title = document.getElementById('changeCurrencyTitle');
-        const list = document.getElementById('changeCurrencyList');
-        
-        if (!modal || !title || !list || !this.currentRates) return;
-        
-        title.textContent = type === 'from' ? 'اختر العملة المصدر' : 'اختر العملة الهدف';
-        list.innerHTML = '';
-        
-        Object.keys(this.currentRates.rates).forEach(currencyCode => {
-            const option = document.createElement('div');
-            option.className = 'currency-option';
-            
-            const imageFile = this.getConverterImageFile(currencyCode);
-            const imageUrl = `https://raw.githubusercontent.com/kettabcrypto-cmd/my-language-app/main/assets/${imageFile}`;
-            const currencyName = CONFIG.CURRENCY_NAMES?.[currencyCode]?.ar || currencyCode;
-            const rate = this.currentRates.rates[currencyCode];
-            
-            option.innerHTML = `
-                <img src="${imageUrl}" alt="${currencyCode}"
-                     onerror="this.src='https://flagcdn.com/w40/${this.getCountryCode(currencyCode)}.png'">
-                <span>${currencyCode} - ${currencyName}</span>
-                <span class="currency-rate">${rate.toFixed(4)}</span>
-            `;
-            
-            option.addEventListener('click', () => {
-                if (type === 'from') {
-                    this.fromCurrency = currencyCode;
-                } else {
-                    this.toCurrency = currencyCode;
-                }
-                this.updateConverter();
-                modal.style.display = 'none';
-            });
-            
-            list.appendChild(option);
-        });
-        
-        modal.style.display = 'flex';
-    }
-    
-    // ========== التحديث التلقائي ==========
-    startAutoUpdate() {
-        setInterval(async () => {
-            console.log('🔄 تحديث تلقائي للأسعار...');
-            await this.loadRates();
-        }, CONFIG.UPDATE_INTERVAL || 1800000); // 30 دقيقة افتراضياً
+        alert(`تغيير العملة ${type === 'from' ? 'المصدر' : 'الهدف'} - قيد التطوير`);
+        // يمكنك تفعيل الكود الحقيقي عندما تعمل الأساسيات
     }
     
     // ========== أدوات مساعدة ==========
-    showError(message) {
-        console.error('⚠️:', message);
-        // يمكنك إضافة عرض رسالة خطأ في الواجهة
+    showMessage(message, type = 'info') {
+        console.log(`${type === 'warning' ? '⚠️' : '📢'} ${message}`);
+        
+        // عرض رسالة مؤقتة
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'temp-message';
+        messageDiv.textContent = message;
+        messageDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            background: ${type === 'warning' ? '#ff9800' : '#2196f3'};
+            animation: slideIn 0.3s ease;
+        `;
+        
+        document.body.appendChild(messageDiv);
+        
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 3000);
     }
 }
 
 // ========== بدء التطبيق ==========
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new CurrencyApp();
-    app.init();
+    console.log('📄 DOM جاهز');
+    
+    // تحقق من أن CONFIG موجود
+    if (typeof CONFIG === 'undefined') {
+        console.error('❌ CONFIG غير موجود! تأكد من تحميل config.js أولاً');
+        alert('خطأ: ملف الإعدادات (config.js) غير محمل');
+        return;
+    }
+    
+    // تحقق من أن CurrencyAPI موجود
+    if (typeof CurrencyAPI === 'undefined') {
+        console.error('❌ CurrencyAPI غير موجود! تأكد من تحميل api.js');
+        alert('خطأ: واجهة API (api.js) غير محملة');
+        return;
+    }
+    
+    // بدء التطبيق
+    try {
+        const app = new CurrencyApp();
+        app.init();
+    } catch (error) {
+        console.error('❌ خطأ فادح في بدء التطبيق:', error);
+        alert('خطأ في بدء التطبيق: ' + error.message);
+    }
 });
 
 // ========== CSS إضافي ==========
 const appStyles = document.createElement('style');
 appStyles.textContent = `
-    /* تحسين البطاقات */
+    /* البطاقات */
     .rate-item {
         display: flex;
         align-items: center;
@@ -562,63 +526,15 @@ appStyles.textContent = `
         color: #7f8c8d;
     }
     
-    /* المودالات */
-    .currency-option {
-        display: flex;
-        align-items: center;
-        padding: 12px 15px;
-        border-bottom: 1px solid #eee;
-        cursor: pointer;
-        transition: background 0.2s;
+    /* الرسوم المتحركة */
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
     
-    .currency-option:hover {
-        background: #f5f5f5;
-    }
-    
-    .currency-option img {
-        width: 36px;
-        height: 36px;
-        margin-right: 12px;
-        border-radius: 6px;
-        object-fit: contain;
-    }
-    
-    .currency-rate {
-        margin-left: auto;
-        font-weight: bold;
-        color: #27ae60;
-        margin-right: 15px;
-    }
-    
-    .add-btn-small {
-        background: #3498db;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        cursor: pointer;
-    }
-    
-    .add-btn-small:hover {
-        background: #2980b9;
-    }
-    
-    /* التحويل بين الثيمات */
-    [data-theme="dark"] .rate-item {
-        background: #2d2d2d;
-        border-color: #404040;
-        color: white;
-    }
-    
-    [data-theme="dark"] .currency-name,
-    [data-theme="dark"] .rate-value {
-        color: #ecf0f1;
-    }
-    
-    [data-theme="dark"] .rate-label {
-        color: #bdc3c7;
+    /* رسائل مؤقتة */
+    .temp-message {
+        animation: slideIn 0.3s ease;
     }
 `;
 document.head.appendChild(appStyles);
