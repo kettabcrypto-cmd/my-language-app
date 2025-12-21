@@ -1,164 +1,43 @@
-// app.js - التطبيق الرئيسي (معدل)
+// app.js - إضافة اختبار API
 class CurrencyApp {
-    constructor() {
-        this.ui = null;
-        this.api = null;
-        this.init();
+    // ... الكود الحالي يبقى كما هو ...
+    
+    async testDirectAPI() {
+        console.log('🧪 اختبار مباشر لـ TwelveData API...');
+        
+        try {
+            // اختبار 1: جلب سعر EUR مباشرة
+            const testUrl1 = `https://api.twelvedata.com/currency_exchange_rate?base=USD&target=EUR&apikey=${CONFIG.API_KEY}`;
+            console.log('🔗 اختبار 1:', testUrl1);
+            
+            const response1 = await fetch(testUrl1);
+            const data1 = await response1.json();
+            console.log('📊 نتيجة اختبار 1:', data1);
+            
+            // اختبار 2: جلب سعر GBP
+            const testUrl2 = `https://api.twelvedata.com/exchange_rate?symbol=USD/GBP&apikey=${CONFIG.API_KEY}`;
+            console.log('🔗 اختبار 2:', testUrl2);
+            
+            const response2 = await fetch(testUrl2);
+            const data2 = await response2.json();
+            console.log('📊 نتيجة اختبار 2:', data2);
+            
+            return { data1, data2 };
+            
+        } catch (error) {
+            console.error('❌ فشل الاختبار المباشر:', error);
+            return null;
+        }
     }
     
     async init() {
         console.log('🚀 بدء تطبيق CurrencyPro...');
         
-        // انتظار تحميل DOM
-        if (document.readyState === 'loading') {
-            await new Promise(resolve => {
-                document.addEventListener('DOMContentLoaded', resolve);
-            });
-        }
+        // ... الكود الحالي ...
         
-        try {
-            // تهيئة API أولاً
-            this.api = new CurrencyAPI();
-            
-            // تهيئة واجهة المستخدم
-            this.ui = new UIManager();
-            
-            // تحميل البيانات الأولية
-            await this.loadInitialData();
-            
-            // بدء التحديث التلقائي
-            this.startAutoUpdate();
-            
-            // اختبار الاتصال بالAPI
-            await this.testAPIConnection();
-            
-            console.log('✅ تم تهيئة التطبيق بنجاح');
-            
-        } catch (error) {
-            console.error('❌ فشل تهيئة التطبيق:', error);
-            Utils.showNotification('Failed to initialize app', 'error');
-        }
-    }
-    
-    async loadInitialData() {
-        console.log('📂 تحميل البيانات الأولية...');
+        // اختبار API مباشر
+        await this.testDirectAPI();
         
-        const storage = new StorageManager();
-        const shouldUpdate = storage.shouldUpdate();
-        
-        if (shouldUpdate) {
-            console.log('🔄 البيانات قديمة، جاري التحديث...');
-            await this.updateExchangeRates();
-        } else {
-            console.log('✅ البيانات حديثة، استخدام المخزنة');
-            
-            // تحديث الواجهة بالبيانات المخزنة
-            const data = storage.load();
-            if (data && data.exchangeRates) {
-                console.log('📊 استخدام الأسعار المخزنة:', data.exchangeRates);
-                this.ui.currentRates = data.exchangeRates;
-            }
-            
-            this.ui.updateRatesDisplay();
-            this.ui.updateConverterDisplay();
-            this.ui.updateLastUpdateDisplay();
-            
-            if (data?.lastUpdate) {
-                const updateTime = new Date(data.lastUpdate);
-                const timeAgo = Utils.getTimeAgo(updateTime);
-                console.log(`⏰ آخر تحديث: ${timeAgo}`);
-            }
-        }
-    }
-    
-    async updateExchangeRates() {
-        console.log('🔄 تحديث أسعار الصرف...');
-        
-        try {
-            if (!this.api) {
-                this.api = new CurrencyAPI();
-            }
-            
-            Utils.showNotification('Updating exchange rates...', 'info');
-            
-            // جلب الأسعار من API
-            const ratesData = await this.api.getRates();
-            
-            console.log('📊 بيانات الأسعار المستلمة:', ratesData);
-            
-            // حفظ الأسعار الجديدة
-            this.ui.currentRates = ratesData;
-            
-            const storage = new StorageManager();
-            storage.updateRates(ratesData.rates, ratesData.timestamp);
-            
-            // تحديث الواجهة
-            this.ui.updateRatesDisplay();
-            this.ui.updateConverterDisplay();
-            this.ui.updateLastUpdateDisplay();
-            
-            const message = ratesData.success ? 
-                `✅ Rates updated (${ratesData.source})` : 
-                '⚠️ Using default rates (API failed)';
-            
-            Utils.showNotification(message, ratesData.success ? 'success' : 'warning');
-            
-            return ratesData.success;
-            
-        } catch (error) {
-            console.error('❌ فشل تحديث الأسعار:', error);
-            Utils.showNotification('Failed to update rates', 'error');
-            return false;
-        }
-    }
-    
-    startAutoUpdate() {
-        const storage = new StorageManager();
-        const settings = storage.getSettings();
-        
-        if (settings.autoUpdate !== false) {
-            console.log('⏰ تفعيل التحديث التلقائي كل ساعة...');
-            
-            // تحديث فوري عند التشغيل
-            setTimeout(() => {
-                this.updateExchangeRates();
-            }, 2000);
-            
-            // التحديث الدوري كل ساعة
-            setInterval(() => {
-                const shouldUpdate = storage.shouldUpdate();
-                if (shouldUpdate) {
-                    console.log('⏰ التحديث التلقائي...');
-                    this.updateExchangeRates();
-                }
-            }, CONFIG.UPDATE_INTERVAL);
-        }
-    }
-    
-    async testAPIConnection() {
-        console.log('🔗 اختبار اتصال API...');
-        
-        try {
-            const testUrl = `${CONFIG.API_BASE_URL}/exchange_rate?symbol=USD/EUR&apikey=${CONFIG.API_KEY}`;
-            console.log('🔗 اختبار الاتصال بـ:', testUrl);
-            
-            const response = await fetch(testUrl);
-            const data = await response.json();
-            
-            console.log('✅ اتصال API ناجح:', data);
-            return true;
-            
-        } catch (error) {
-            console.error('❌ فشل اتصال API:', error);
-            return false;
-        }
+        // ... باقي الكود ...
     }
 }
-
-// بدء التطبيق
-let app;
-document.addEventListener('DOMContentLoaded', () => {
-    app = new CurrencyApp();
-    window.app = app;
-    window.Utils = Utils; // لجعل Utils متاحة للتصحيح
-});
