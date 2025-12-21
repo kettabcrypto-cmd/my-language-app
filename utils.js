@@ -1,42 +1,83 @@
-// Utility functions for CurrencyPro
-class Utils {
-    // Format number with commas
-    static formatNumber(num, decimals = 4) {
-        return parseFloat(num).toLocaleString('en-US', {
+// utils.js - أدوات مساعدة
+const Utils = {
+    // تنسيق الأرقام
+    formatNumber: (num, decimals = 4) => {
+        const number = parseFloat(num);
+        if (isNaN(number)) return '0.0000';
+        
+        return number.toLocaleString('en-US', {
             minimumFractionDigits: decimals,
             maximumFractionDigits: decimals
         });
-    }
+    },
     
-    // Format currency for display
-    static formatCurrency(amount, currencyCode) {
-        const formattedAmount = this.formatNumber(amount, 2);
-        return `${currencyCode} ${formattedAmount}`;
-    }
+    // تنسيق الوقت
+    formatTime: (date) => {
+        return date.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
     
-    // Sanitize amount input
-    static sanitizeAmountInput(input) {
-        // Remove everything except numbers and dot
-        return input.replace(/[^0-9.]/g, '');
-    }
+    // حساب الوقت المنقضي
+    getTimeAgo: (updateTime) => {
+        const now = new Date();
+        const update = new Date(updateTime);
+        const diffMinutes = Math.floor((now - update) / (1000 * 60));
+        
+        if (diffMinutes < 1) return 'Just now';
+        if (diffMinutes < 60) return `${diffMinutes}m ago`;
+        
+        const hours = Math.floor(diffMinutes / 60);
+        return `${hours}h ago`;
+    },
     
-    // Get currency name from code
-    static getCurrencyName(code) {
-        const currency = CONFIG.ALL_CURRENCIES.find(c => c.code === code);
-        return currency ? currency.name : code;
-    }
-    
-    // Show notification
-    static showNotification(message, type = 'info') {
-        // Remove existing notification
-        const existingNotification = document.querySelector('.app-notification');
-        if (existingNotification) {
-            existingNotification.remove();
+    // الحصول على رابط الصورة
+    getImageUrl: (currencyCode, type = 'converter') => {
+        const imageMap = type === 'converter' ? CONFIG.CONVERTER_IMAGES : CONFIG.RATES_IMAGES;
+        const imageName = imageMap[currencyCode];
+        
+        if (imageName) {
+            return CONFIG.IMAGE_BASE_URL + imageName;
         }
         
-        // Create new notification
+        // الصورة الافتراضية
+        return CONFIG.IMAGE_BASE_URL + '101-currency-usd.png';
+    },
+    
+    // إنشاء عنصر العملة
+    createCurrencyElement: (currency, type = 'rates') => {
+        const div = document.createElement('div');
+        const imageUrl = Utils.getImageUrl(currency.code, 'rates');
+        
+        if (type === 'rates') {
+            div.className = 'rate-item';
+            div.innerHTML = `
+                <img src="${imageUrl}" 
+                     alt="${currency.code}" 
+                     class="currency-image"
+                     onerror="this.src='${CONFIG.IMAGE_BASE_URL}101-currency-usd.png'">
+                <div class="rate-info">
+                    <div class="rate-header">
+                        <div class="currency-name">${currency.code}</div>
+                    </div>
+                    <div class="rate-display-line">Loading rate...</div>
+                </div>
+                <div class="rate-actions">
+                    <button class="action-btn remove-btn" data-currency="${currency.code}" title="Remove">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `;
+        }
+        
+        return div;
+    },
+    
+    // عرض إشعار
+    showNotification: (message, type = 'info') => {
         const notification = document.createElement('div');
-        notification.className = `app-notification notification ${type}`;
+        notification.className = 'notification';
         
         let icon = 'info-circle';
         let bgColor = 'var(--primary-color)';
@@ -75,87 +116,10 @@ class Utils {
         
         document.body.appendChild(notification);
         
-        // Remove after 3 seconds
         setTimeout(() => {
             notification.style.opacity = '0';
             notification.style.transform = 'translateX(-50%) translateY(-10px)';
             setTimeout(() => notification.remove(), 300);
         }, 3000);
     }
-    
-    // Update last update time display
-    static updateLastUpdateDisplay() {
-        const timeElement = document.getElementById('lastUpdateTime');
-        const statusElement = document.getElementById('lastUpdateStatus');
-        
-        if (!timeElement || !statusElement) return;
-        
-        if (AppState.lastUpdate) {
-            const updateTime = new Date(AppState.lastUpdate);
-            const now = new Date();
-            const diffMinutes = Math.floor((now - updateTime) / (1000 * 60));
-            
-            // Format time
-            timeElement.textContent = updateTime.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            // Format status
-            if (diffMinutes < 1) {
-                statusElement.textContent = 'Just now';
-                statusElement.style.color = '#28a745';
-            } else if (diffMinutes < 60) {
-                statusElement.textContent = `${diffMinutes}m ago`;
-                statusElement.style.color = 'var(--primary-color)';
-            } else {
-                const hours = Math.floor(diffMinutes / 60);
-                statusElement.textContent = `${hours}h ago`;
-                statusElement.style.color = 'var(--text-secondary)';
-            }
-        } else {
-            timeElement.textContent = '--:--';
-            statusElement.textContent = 'Never updated';
-            statusElement.style.color = 'var(--text-secondary)';
-        }
-    }
-    
-    // Apply theme
-    static applyTheme(theme) {
-        AppState.theme = theme;
-        saveAppState();
-        
-        if (theme === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'dark');
-        } else {
-            document.documentElement.removeAttribute('data-theme');
-        }
-        
-        // Update theme buttons
-        document.querySelectorAll('.theme-option').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.theme === theme) {
-                btn.classList.add('active');
-            }
-        });
-    }
-    
-    // Start auto-update timer
-    static startAutoUpdate() {
-        // Clear existing timer
-        if (window.updateTimer) {
-            clearInterval(window.updateTimer);
-        }
-        
-        // Update immediately
-        window.updateRates();
-        
-        // Set interval for hourly updates
-        window.updateTimer = setInterval(() => {
-            console.log('Auto-updating exchange rates...');
-            window.updateRates();
-        }, CONFIG.UPDATE_INTERVAL);
-        
-        console.log(`Auto-update enabled: updates every ${CONFIG.UPDATE_INTERVAL / 60000} minutes`);
-    }
-}
+};
