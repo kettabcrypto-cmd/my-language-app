@@ -3,97 +3,102 @@ class CurrencyApp {
         this.api = new CurrencyAPI();
         this.currentRates = null;
         this.updateInterval = null;
-        this.lastUpdateTime = null;
+        this.activePage = 'ratesPage';
+        
+        // العملات الافتراضية للمحول
+        this.fromCurrency = 'USD';
+        this.toCurrency = 'EUR';
+        
+        // العملات المعروضة
+        this.displayedCurrencies = ['EUR', 'GBP', 'JPY', 'AED', 'SAR', 'QAR', 'CAD', 'AUD'];
     }
     
     async init() {
-        console.log('🚀 بدء تطبيق CurrencyPro مع TwelveData API');
+        console.log('🚀 بدء تطبيق CurrencyPro');
         
-        // إخفاء رسالة التحميل الافتراضية
-        this.hideDefaultLoading();
+        // إعداد جميع الأحداث
+        this.setupNavigation();
+        this.setupConverter();
+        this.setupSettings();
+        this.setupModals();
+        this.setupButtons();
         
-        try {
-            // تحميل الأسعار الأولية
-            await this.loadRates();
-            
-            // تفعيل التحديث التلقائي كل 30 دقيقة
-            this.startAutoUpdate(30 * 60 * 1000); // 30 دقيقة
-            
-            // إعداد الأحداث
-            this.setupEvents();
-            
-            // تحديث الوقت
-            this.updateLastUpdateTime();
-            
-            console.log('✅ التطبيق جاهز');
-            
-        } catch (error) {
-            console.error('❌ خطأ في تهيئة التطبيق:', error);
-            this.showError('خطأ في تحميل الأسعار الحية. استخدام بيانات افتراضية.');
-            
-            // استخدام البيانات الافتراضية
-            this.currentRates = this.api.getFallbackRates();
-            this.renderRates();
-        }
+        // تحميل الأسعار الأولية
+        await this.loadInitialRates();
+        
+        // بدء التحديث التلقائي
+        this.startAutoUpdate();
+        
+        console.log('✅ التطبيق جاهز');
     }
     
-    hideDefaultLoading() {
-        const loadingElement = document.querySelector('.rate-display-line');
-        if (loadingElement && loadingElement.textContent.includes('Loading')) {
-            loadingElement.textContent = 'جاري التحميل...';
-        }
-    }
-    
-    async loadRates() {
-        console.log('🔄 جاري تحديث الأسعار...');
-        
+    async loadInitialRates() {
         try {
             this.currentRates = await this.api.getRealTimeRates();
             
             if (this.currentRates && this.currentRates.rates) {
-                this.renderRates();
-                this.updateLastUpdateTime();
-                this.updateConverterRates();
-                return true;
+                // تحديث الصفحات
+                this.updateRatesPage();
+                this.updateConverter();
+                this.updateSettings();
             }
             
-            return false;
-            
         } catch (error) {
-            console.error('❌ فشل تحميل الأسعار:', error);
-            this.showError('فشل الاتصال بخدمة الأسعار');
-            throw error;
+            console.error('❌ خطأ في تحميل الأسعار:', error);
+            this.currentRates = this.api.getFallbackRates();
+            this.updateRatesPage();
         }
     }
     
-    renderRates() {
-        const ratesList = document.getElementById('ratesList');
+    // ========== إعداد التنقل ==========
+    setupNavigation() {
+        const navItems = document.querySelectorAll('.nav-item');
         
-        if (!ratesList) {
-            console.error('❌ عنصر قائمة الأسعار غير موجود');
-            return;
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                const targetPage = item.getAttribute('data-page');
+                this.switchPage(targetPage);
+                
+                // تحديث حالة التنشيط
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                
+                this.activePage = targetPage;
+            });
+        });
+    }
+    
+    switchPage(pageId) {
+        // إخفاء جميع الصفحات
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.remove('active');
+        });
+        
+        // إظهار الصفحة المطلوبة
+        const targetPage = document.getElementById(pageId);
+        if (targetPage) {
+            targetPage.classList.add('active');
+            
+            // إذا كانت صفحة الأسعار، تحديثها
+            if (pageId === 'ratesPage') {
+                this.updateRatesPage();
+            }
         }
+    }
+    
+    // ========== صفحة الأسعار ==========
+    updateRatesPage() {
+        const ratesList = document.getElementById('ratesList');
+        if (!ratesList || !this.currentRates) return;
         
-        // مسح المحتوى القديم
         ratesList.innerHTML = '';
         
-        if (!this.currentRates || !this.currentRates.rates) {
-            ratesList.innerHTML = `
-                <div class="rate-item">
-                    <div class="rate-info">
-                        <div class="rate-display-line">لا توجد بيانات</div>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        const { rates } = this.currentRates;
-        const currenciesToShow = ['EUR', 'GBP', 'JPY', 'AED', 'SAR', 'QAR', 'CAD', 'AUD'];
-        
-        currenciesToShow.forEach(currency => {
-            if (rates[currency] && currency !== 'USD') {
-                const rateItem = this.createRateItem(currency, rates[currency]);
+        this.displayedCurrencies.forEach(currencyCode => {
+            const rate = this.currentRates.rates[currencyCode];
+            if (rate) {
+                const rateItem = this.createRateItem(currencyCode, rate);
                 ratesList.appendChild(rateItem);
             }
         });
@@ -102,66 +107,179 @@ class CurrencyApp {
     createRateItem(currencyCode, rate) {
         const rateItem = document.createElement('div');
         rateItem.className = 'rate-item';
+        rateItem.dataset.currency = currencyCode;
         
-        const flagUrl = CONFIG.CURRENCY_FLAGS && CONFIG.CURRENCY_FLAGS[currencyCode] 
-            ? CONFIG.CURRENCY_FLAGS[currencyCode]
-            : `https://flagcdn.com/w40/${this.getCountryCode(currencyCode)}.png`;
+        // الحصول على الصورة المناسبة
+        const imageUrl = CONFIG.RATES_IMAGES[currencyCode] || 
+                        CONFIG.FALLBACK_IMAGES[currencyCode] ||
+                        'https://via.placeholder.com/40x30/cccccc/666666?text=' + currencyCode;
+        
+        const currencyName = CONFIG.CURRENCY_NAMES[currencyCode]?.ar || currencyCode;
         
         rateItem.innerHTML = `
-            <img src="${flagUrl}" alt="${currencyCode}" class="currency-image" 
-                 onerror="this.src='https://via.placeholder.com/40x30/cccccc/666666?text=${currencyCode}'">
+            <img src="${imageUrl}" alt="${currencyCode}" class="currency-image"
+                 onerror="this.onerror=null; this.src='${CONFIG.FALLBACK_IMAGES[currencyCode] || 'https://via.placeholder.com/40x30/cccccc/666666?text=' + currencyCode}'">
             <div class="rate-info">
                 <div class="rate-header">
                     <div class="currency-name">${currencyCode}</div>
                 </div>
                 <div class="rate-display-line">
                     <span class="rate-value">${rate.toFixed(4)}</span>
-                    <span class="rate-label">${this.getCurrencyName(currencyCode)}</span>
+                    <span class="rate-label">${currencyName}</span>
                 </div>
             </div>
         `;
         
+        // إضافة حدث النقر لتغيير العملة في المحول
+        rateItem.addEventListener('click', () => {
+            this.toCurrency = currencyCode;
+            this.updateConverter();
+            this.switchPage('convertPage');
+            
+            // تحديث التنشيط
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            document.querySelector('.nav-item[data-page="convertPage"]').classList.add('active');
+        });
+        
         return rateItem;
     }
     
-    getCountryCode(currencyCode) {
-        const countryMap = {
-            'USD': 'us',
-            'EUR': 'eu',
-            'GBP': 'gb',
-            'JPY': 'jp',
-            'AED': 'ae',
-            'SAR': 'sa',
-            'QAR': 'qa',
-            'CAD': 'ca',
-            'AUD': 'au',
-            'CHF': 'ch',
-            'CNY': 'cn'
-        };
-        return countryMap[currencyCode] || 'un';
+    // ========== المحول ==========
+    setupConverter() {
+        // زر تبديل العملات
+        const swapBtn = document.getElementById('swapCurrencies');
+        if (swapBtn) {
+            swapBtn.addEventListener('click', () => this.swapCurrencies());
+        }
+        
+        // أزرار تغيير العملات
+        const changeFromBtn = document.getElementById('changeFromCurrencyBtn');
+        const changeToBtn = document.getElementById('changeToCurrencyBtn');
+        
+        if (changeFromBtn) {
+            changeFromBtn.addEventListener('click', () => {
+                this.openCurrencyModal('from');
+            });
+        }
+        
+        if (changeToBtn) {
+            changeToBtn.addEventListener('click', () => {
+                this.openCurrencyModal('to');
+            });
+        }
+        
+        // إدخال المبلغ
+        const fromAmount = document.getElementById('fromAmount');
+        if (fromAmount) {
+            fromAmount.addEventListener('input', () => {
+                this.updateConversion();
+            });
+        }
+        
+        // تحديث المحول أول مرة
+        this.updateConverter();
     }
     
-    getCurrencyName(code) {
-        const names = {
-            'EUR': 'يورو',
-            'GBP': 'جنيه إسترليني',
-            'JPY': 'ين ياباني',
-            'AED': 'درهم إماراتي',
-            'SAR': 'ريال سعودي',
-            'QAR': 'ريال قطري',
-            'CAD': 'دولار كندي',
-            'AUD': 'دولار أسترالي',
-            'CHF': 'فرنك سويسري',
-            'CNY': 'يوان صيني'
+    updateConverter() {
+        if (!this.currentRates) return;
+        
+        // تحديث الأعلام
+        this.updateCurrencyFlag('from', this.fromCurrency);
+        this.updateCurrencyFlag('to', this.toCurrency);
+        
+        // تحديث الرموز
+        document.getElementById('fromCurrencyCode').textContent = this.fromCurrency;
+        document.getElementById('toCurrencyCode').textContent = this.toCurrency;
+        
+        // تحديث سعر الصرف
+        this.updateExchangeRate();
+        
+        // تحديث التحويل
+        this.updateConversion();
+    }
+    
+    updateCurrencyFlag(type, currencyCode) {
+        const flagElement = document.getElementById(`${type}FlagImg`);
+        if (!flagElement) return;
+        
+        const imageUrl = CONFIG.CONVERTER_IMAGES[currencyCode] || 
+                        CONFIG.FALLBACK_IMAGES[currencyCode];
+        
+        flagElement.src = imageUrl;
+        flagElement.alt = currencyCode;
+        
+        // معالجة الخطأ في تحميل الصورة
+        flagElement.onerror = () => {
+            flagElement.src = CONFIG.FALLBACK_IMAGES[currencyCode] || 
+                             'https://via.placeholder.com/40x30/cccccc/666666?text=' + currencyCode;
         };
-        return names[code] || '';
+    }
+    
+    updateExchangeRate() {
+        const rateText = document.getElementById('rateText');
+        if (!rateText || !this.currentRates) return;
+        
+        const fromRate = this.currentRates.rates[this.fromCurrency] || 1;
+        const toRate = this.currentRates.rates[this.toCurrency] || 1;
+        
+        if (fromRate && toRate) {
+            const exchangeRate = toRate / fromRate;
+            rateText.textContent = `1 ${this.fromCurrency} = ${exchangeRate.toFixed(4)} ${this.toCurrency}`;
+        }
+    }
+    
+    updateConversion() {
+        const fromAmountInput = document.getElementById('fromAmount');
+        const toAmountInput = document.getElementById('toAmount');
+        
+        if (!fromAmountInput || !toAmountInput || !this.currentRates) return;
+        
+        const amount = parseFloat(fromAmountInput.value) || 0;
+        const fromRate = this.currentRates.rates[this.fromCurrency] || 1;
+        const toRate = this.currentRates.rates[this.toCurrency] || 1;
+        
+        if (fromRate && toRate) {
+            const convertedAmount = (amount / fromRate) * toRate;
+            toAmountInput.value = convertedAmount.toFixed(2);
+        }
+    }
+    
+    swapCurrencies() {
+        // تبديل العملات
+        [this.fromCurrency, this.toCurrency] = [this.toCurrency, this.fromCurrency];
+        
+        // تحديث المحول
+        this.updateConverter();
+    }
+    
+    // ========== الإعدادات ==========
+    setupSettings() {
+        // تبديل الثيم
+        const themeOptions = document.querySelectorAll('.theme-option');
+        themeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                themeOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+                
+                const theme = option.getAttribute('data-theme');
+                this.setTheme(theme);
+            });
+        });
+        
+        // تحديث وقت التحديث
+        this.updateLastUpdateTime();
+    }
+    
+    setTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('currencypro-theme', theme);
     }
     
     updateLastUpdateTime() {
         const lastUpdateTime = document.getElementById('lastUpdateTime');
         const lastUpdateStatus = document.getElementById('lastUpdateStatus');
         
-        if (lastUpdateTime) {
+        if (lastUpdateTime && this.currentRates) {
             const now = new Date();
             const timeStr = now.toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
@@ -172,64 +290,100 @@ class CurrencyApp {
         }
         
         if (lastUpdateStatus) {
-            lastUpdateStatus.textContent = this.currentRates && this.currentRates.success 
-                ? 'محدث الآن' 
-                : 'بيانات افتراضية';
-            lastUpdateStatus.style.color = this.currentRates && this.currentRates.success 
-                ? '#28a745' 
-                : '#ffc107';
+            lastUpdateStatus.textContent = this.currentRates?.success ? 'محدث الآن' : 'بيانات افتراضية';
+            lastUpdateStatus.style.color = this.currentRates?.success ? '#28a745' : '#ffc107';
         }
     }
     
-    updateConverterRates() {
-        if (!this.currentRates || !this.currentRates.rates) return;
+    updateSettings() {
+        this.updateLastUpdateTime();
+    }
+    
+    // ========== المودالات ==========
+    setupModals() {
+        // إغلاق المودالات
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const closeChangeModalBtn = document.getElementById('closeChangeModalBtn');
         
-        const rates = this.currentRates.rates;
-        const fromCurrency = document.getElementById('fromCurrencyCode').textContent;
-        const toCurrency = document.getElementById('toCurrencyCode').textContent;
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => {
+                document.getElementById('addCurrencyModal').style.display = 'none';
+            });
+        }
         
-        if (rates[fromCurrency] && rates[toCurrency]) {
-            const exchangeRate = rates[toCurrency] / rates[fromCurrency];
-            const rateText = document.getElementById('rateText');
+        if (closeChangeModalBtn) {
+            closeChangeModalBtn.addEventListener('click', () => {
+                document.getElementById('changeCurrencyModal').style.display = 'none';
+            });
+        }
+        
+        // إغلاق عند النقر خارج المودال
+        window.addEventListener('click', (e) => {
+            const addModal = document.getElementById('addCurrencyModal');
+            const changeModal = document.getElementById('changeCurrencyModal');
             
-            if (rateText) {
-                rateText.textContent = `1 ${fromCurrency} = ${exchangeRate.toFixed(4)} ${toCurrency}`;
+            if (addModal && e.target === addModal) {
+                addModal.style.display = 'none';
             }
             
-            // تحديث المبلغ المحول
-            const fromAmount = document.getElementById('fromAmount');
-            const toAmount = document.getElementById('toAmount');
-            
-            if (fromAmount && toAmount) {
-                const amount = parseFloat(fromAmount.value) || 100;
-                const converted = amount * exchangeRate;
-                toAmount.value = converted.toFixed(2);
+            if (changeModal && e.target === changeModal) {
+                changeModal.style.display = 'none';
             }
-        }
+        });
     }
     
-    startAutoUpdate(interval = 30 * 60 * 1000) {
-        // إيقاف أي تحديث سابق
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-        }
+    openCurrencyModal(type) {
+        const modal = document.getElementById('changeCurrencyModal');
+        const title = document.getElementById('changeCurrencyTitle');
+        const list = document.getElementById('changeCurrencyList');
         
-        // تفعيل التحديث التلقائي
-        this.updateInterval = setInterval(async () => {
-            console.log('⏰ تحديث تلقائي للأسعار...');
-            await this.loadRates();
-        }, interval);
+        if (!modal || !title || !list) return;
         
-        console.log(`🔄 تفعيل التحديث التلقائي كل ${interval / 60000} دقيقة`);
+        // تحديث العنوان
+        title.textContent = type === 'from' ? 'اختر العملة المصدر' : 'اختر العملة الهدف';
+        
+        // ملء القائمة
+        list.innerHTML = '';
+        
+        CONFIG.SUPPORTED_CURRENCIES.forEach(currencyCode => {
+            if (!this.currentRates?.rates[currencyCode]) return;
+            
+            const currencyOption = document.createElement('div');
+            currencyOption.className = 'currency-option';
+            currencyOption.dataset.currency = currencyCode;
+            
+            const imageUrl = CONFIG.CONVERTER_IMAGES[currencyCode] || 
+                            CONFIG.FALLBACK_IMAGES[currencyCode];
+            
+            const currencyName = CONFIG.CURRENCY_NAMES[currencyCode]?.ar || currencyCode;
+            const rate = this.currentRates.rates[currencyCode];
+            
+            currencyOption.innerHTML = `
+                <img src="${imageUrl}" alt="${currencyCode}" 
+                     onerror="this.src='${CONFIG.FALLBACK_IMAGES[currencyCode] || 'https://via.placeholder.com/32x24/cccccc/666666?text=' + currencyCode}'">
+                <span>${currencyCode} - ${currencyName}</span>
+                <span class="currency-rate">${rate.toFixed(4)}</span>
+            `;
+            
+            currencyOption.addEventListener('click', () => {
+                if (type === 'from') {
+                    this.fromCurrency = currencyCode;
+                } else {
+                    this.toCurrency = currencyCode;
+                }
+                
+                this.updateConverter();
+                modal.style.display = 'none';
+            });
+            
+            list.appendChild(currencyOption);
+        });
+        
+        modal.style.display = 'flex';
     }
     
-    setupEvents() {
-        // زر تحديث يدوي (إذا أردت إضافته)
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.loadRates());
-        }
-        
+    // ========== الأزرار ==========
+    setupButtons() {
         // زر إضافة عملة
         const addCurrencyBtn = document.getElementById('addCurrencyBtn');
         if (addCurrencyBtn) {
@@ -237,99 +391,91 @@ class CurrencyApp {
                 this.showAvailableCurrencies();
             });
         }
-        
-        // زر تبديل العملات في المحول
-        const swapBtn = document.getElementById('swapCurrencies');
-        if (swapBtn) {
-            swapBtn.addEventListener('click', () => {
-                this.swapCurrencies();
-            });
-        }
-        
-        // تحديث المحول عند تغيير المبلغ
-        const fromAmount = document.getElementById('fromAmount');
-        if (fromAmount) {
-            fromAmount.addEventListener('input', () => {
-                this.updateConverterRates();
-            });
-        }
-    }
-    
-    swapCurrencies() {
-        const fromCode = document.getElementById('fromCurrencyCode');
-        const toCode = document.getElementById('toCurrencyCode');
-        const fromFlag = document.getElementById('fromFlagImg');
-        const toFlag = document.getElementById('toFlagImg');
-        
-        // تبديل الرموز
-        const tempCode = fromCode.textContent;
-        fromCode.textContent = toCode.textContent;
-        toCode.textContent = tempCode;
-        
-        // تبديل الأعلام
-        const tempFlag = fromFlag.src;
-        fromFlag.src = toFlag.src;
-        toFlag.src = tempFlag;
-        
-        // تحديث الأسعار
-        this.updateConverterRates();
     }
     
     showAvailableCurrencies() {
         const modal = document.getElementById('addCurrencyModal');
-        const currencyList = document.getElementById('availableCurrenciesList');
+        const list = document.getElementById('availableCurrenciesList');
         
-        if (!modal || !currencyList) return;
+        if (!modal || !list || !this.currentRates) return;
         
-        // إظهار القائمة
+        list.innerHTML = '';
+        
+        // عرض العملات غير المعروضة حالياً
+        CONFIG.SUPPORTED_CURRENCIES.forEach(currencyCode => {
+            if (this.displayedCurrencies.includes(currencyCode) || currencyCode === 'USD') return;
+            
+            if (this.currentRates.rates[currencyCode]) {
+                const currencyOption = document.createElement('div');
+                currencyOption.className = 'currency-option';
+                currencyOption.dataset.currency = currencyCode;
+                
+                const imageUrl = CONFIG.RATES_IMAGES[currencyCode] || 
+                                CONFIG.FALLBACK_IMAGES[currencyCode];
+                
+                const currencyName = CONFIG.CURRENCY_NAMES[currencyCode]?.ar || currencyCode;
+                const rate = this.currentRates.rates[currencyCode];
+                
+                currencyOption.innerHTML = `
+                    <img src="${imageUrl}" alt="${currencyCode}"
+                         onerror="this.src='${CONFIG.FALLBACK_IMAGES[currencyCode] || 'https://via.placeholder.com/32x24/cccccc/666666?text=' + currencyCode}'">
+                    <span>${currencyCode} - ${currencyName}</span>
+                    <span class="currency-rate">${rate.toFixed(4)}</span>
+                    <button class="add-btn-small">+ إضافة</button>
+                `;
+                
+                const addBtn = currencyOption.querySelector('.add-btn-small');
+                addBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.addCurrencyToDisplay(currencyCode);
+                    modal.style.display = 'none';
+                });
+                
+                list.appendChild(currencyOption);
+            }
+        });
+        
         modal.style.display = 'flex';
-        
-        // ملء القائمة بالعملات المتاحة
-        const availableCurrencies = Object.keys(this.currentRates?.rates || {});
-        
-        currencyList.innerHTML = availableCurrencies
-            .filter(currency => currency !== 'USD')
-            .map(currency => `
-                <div class="currency-option" data-currency="${currency}">
-                    <img src="https://flagcdn.com/w40/${this.getCountryCode(currency)}.png" alt="${currency}">
-                    <span>${currency} - ${this.getCurrencyName(currency)}</span>
-                    <span class="currency-rate">${this.currentRates.rates[currency].toFixed(4)}</span>
-                </div>
-            `).join('');
-        
-        // إغلاق المودال
-        const closeBtn = document.getElementById('closeModalBtn');
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                modal.style.display = 'none';
-            };
+    }
+    
+    addCurrencyToDisplay(currencyCode) {
+        if (!this.displayedCurrencies.includes(currencyCode)) {
+            this.displayedCurrencies.push(currencyCode);
+            this.updateRatesPage();
+            localStorage.setItem('displayedCurrencies', JSON.stringify(this.displayedCurrencies));
         }
     }
     
-    showError(message) {
-        console.error('⚠️ خطأ:', message);
+    // ========== التحديث التلقائي ==========
+    startAutoUpdate() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+        }
         
-        // إضافة رسالة خطأ في قائمة الأسعار
-        const ratesList = document.getElementById('ratesList');
-        if (ratesList) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message';
-            errorDiv.textContent = message;
-            errorDiv.style.cssText = `
-                background: #ffebee;
-                color: #c62828;
-                padding: 10px;
-                margin: 10px;
-                border-radius: 4px;
-                border: 1px solid #ffcdd2;
-                text-align: center;
-            `;
-            ratesList.appendChild(errorDiv);
+        this.updateInterval = setInterval(async () => {
+            console.log('🔄 تحديث تلقائي للأسعار...');
+            await this.loadInitialRates();
+        }, CONFIG.UPDATE_INTERVAL);
+    }
+    
+    // ========== التحميل/الحفظ ==========
+    loadPreferences() {
+        // تحميل الثيم
+        const savedTheme = localStorage.getItem('currencypro-theme');
+        if (savedTheme) {
+            this.setTheme(savedTheme);
+            document.querySelector(`.theme-option[data-theme="${savedTheme}"]`)?.classList.add('active');
+        }
+        
+        // تحميل العملات المعروضة
+        const savedCurrencies = localStorage.getItem('displayedCurrencies');
+        if (savedCurrencies) {
+            this.displayedCurrencies = JSON.parse(savedCurrencies);
         }
     }
 }
 
-// بدء التطبيق عند تحميل الصفحة
+// بدء التطبيق
 document.addEventListener('DOMContentLoaded', () => {
     const app = new CurrencyApp();
     app.init();
@@ -339,57 +485,13 @@ document.addEventListener('DOMContentLoaded', () => {
 const style = document.createElement('style');
 style.textContent = `
     .rate-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 16px;
-        border-bottom: 1px solid #f0f0f0;
-        transition: background-color 0.2s;
+        cursor: pointer;
+        transition: transform 0.2s;
     }
     
     .rate-item:hover {
+        transform: translateX(5px);
         background-color: #f8f9fa;
-    }
-    
-    .currency-image {
-        width: 40px;
-        height: 30px;
-        border-radius: 4px;
-        margin-right: 12px;
-        object-fit: cover;
-    }
-    
-    .rate-info {
-        flex: 1;
-    }
-    
-    .rate-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 4px;
-    }
-    
-    .currency-name {
-        font-weight: 600;
-        font-size: 16px;
-        color: #333;
-    }
-    
-    .rate-display-line {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    
-    .rate-value {
-        font-weight: bold;
-        font-size: 18px;
-        color: #2c3e50;
-    }
-    
-    .rate-label {
-        font-size: 14px;
-        color: #7f8c8d;
     }
     
     .currency-option {
@@ -410,19 +512,47 @@ style.textContent = `
         height: 24px;
         margin-right: 12px;
         border-radius: 3px;
+        object-fit: cover;
     }
     
     .currency-rate {
         margin-left: auto;
         font-weight: bold;
         color: #27ae60;
+        margin-right: 12px;
     }
     
-    .mid-market-rate p {
+    .add-btn-small {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
         font-size: 12px;
-        color: #666;
-        text-align: center;
-        margin: 8px 0;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .add-btn-small:hover {
+        background: #2980b9;
+    }
+    
+    [data-theme="dark"] {
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    [data-theme="dark"] .container {
+        background: #2d2d2d;
+    }
+    
+    .swap-icon-btn {
+        cursor: pointer;
+        transition: transform 0.3s;
+    }
+    
+    .swap-icon-btn:hover {
+        transform: rotate(180deg);
     }
 `;
 document.head.appendChild(style);
