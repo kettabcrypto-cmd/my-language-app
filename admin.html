@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#04437C">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="apple-touch-icon" href="assets/img/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@500;600;700&family=Reem+Kufi:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/main.css">
+<meta name="robots" content="noindex,nofollow">
+<title>لوحة الإدارة · Dz2link</title>
+</head>
+<body>
+<div class="app">
+  <h1 class="logo small"><img src="assets/img/logo.jpg" alt="Dz2link" width="800" height="340"></h1>
+  <main>
+    <section id="loginView" hidden>
+      <h2 class="page-title">دخول الإدارة</h2>
+      <form id="loginForm" class="state-card" style="text-align:start">
+        <label class="lb" for="email">البريد</label>
+        <input class="field" id="email" type="email" autocomplete="username" required>
+        <label class="lb" for="password" style="margin-top:12px">كلمة المرور</label>
+        <input class="field" id="password" type="password" autocomplete="current-password" required>
+        <button class="btn" id="loginBtn" type="submit">دخول</button>
+      </form>
+    </section>
+
+    <section id="dashView" hidden>
+      <h2 class="page-title"><span class="tag v">الإدارة</span> الجولات والسحب</h2>
+      <div class="stats">
+        <div class="stat"><b id="curRound">—</b><span>الجولة الحالية</span></div>
+        <div class="stat"><b id="curState">—</b><span>التسجيل</span></div>
+        <div class="stat"><b id="curLeft">—</b><span>الوقت المتبقي</span></div>
+      </div>
+      <div id="roundsList"></div>
+      <button class="btn sm ghost" id="logoutBtn" type="button">تسجيل الخروج</button>
+    </section>
+  </main>
+</div>
+<script type="module" src="assets/js/admin.js"></script>
+</body>
+</html>
